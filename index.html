@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
+<meta name="description" content="Buy low, fix 'em up, sell high. Run a used car dealership from a gravel lot to an auto mall.">
+<title>Dealer Wars | Kaotic Gaming</title>
+<script>
+  // On Kaotic Gaming the files live under /play/<game>/; opened on its own, they're next to this page.
+  // Bump ASSET_V when the css/js change so browsers fetch the new copies.
+  const ASSET_V = '20261021-1';
+  const assetRoot = window.KG_BOOT ? `/play/${window.KG_BOOT.game}/` : './';
+  document.write(`<link rel="stylesheet" href="${assetRoot}style.css?v=${ASSET_V}">`);
+  for (const f of ['data.js', 'sim.js', 'ui.js']) document.write(`<script src="${assetRoot}${f}?v=${ASSET_V}"><\/script>`);
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Bungee&display=swap">
+</head>
+<body>
+<header class="hud">
+  <div class="brand"><span class="logo">DEALER <b>WARS</b></span><span class="dealer" id="dealerName"></span></div>
+  <div class="stats">
+    <div class="stat cash"><span>Cash</span><strong id="sCash">$0</strong></div>
+    <div class="stat debt" id="debtStat"><span>Debt</span><strong id="sDebt">$0</strong></div>
+    <div class="stat"><span>Net worth</span><strong id="sNet">$0</strong></div>
+    <div class="stat"><span>Reputation</span><strong><span class="rep"><i id="sRep"></i></span> <small id="sRepN"></small></strong></div>
+    <div class="stat"><span>Lot</span><strong id="sLot">0/6</strong></div>
+  </div>
+  <div class="hud-buttons">
+    <span class="save-state" id="saveState"></span>
+    <button class="btn small" id="helpBtn" type="button">How to play</button>
+    <button class="btn small hidden" id="homeBtn" type="button">&#9664; Games</button>
+  </div>
+</header>
+
+<main class="main">
+  <section>
+    <div class="scene-wrap">
+      <svg id="scene" viewBox="0 0 960 620" role="img" aria-label="Your dealership and car lot"></svg>
+      <div class="day-bar">
+        <div><div class="day-label" id="dayLabel">Day 1</div><div class="day-sub" id="daySub"></div></div>
+        <div class="row">
+          <label class="auto small" title="Take offers that make a profit and skip trade-ins, without asking"><input type="checkbox" id="autoDeals"> Auto-deal</label>
+          <div class="speed hidden" id="speedBox">
+            <button class="btn small" data-speed="1" type="button">1&times;</button>
+            <button class="btn small" data-speed="3" type="button">3&times;</button>
+          </div>
+          <button class="open-btn" id="openBtn" type="button">OPEN FOR BUSINESS &#9654;</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <aside class="panel">
+    <nav class="tabs" role="tablist" id="tabs">
+      <button type="button" role="tab" data-tab="lot" aria-selected="true">Lot</button>
+      <button type="button" role="tab" data-tab="buy">Buy cars</button>
+      <button type="button" role="tab" data-tab="upgrades">Upgrades</button>
+      <button type="button" role="tab" data-tab="staff">Staff</button>
+      <button type="button" role="tab" data-tab="bank">Bank</button>
+      <button type="button" role="tab" data-tab="news">News</button>
+    </nav>
+    <div class="tab-body" id="tabBody"></div>
+  </aside>
+</main>
+
+<div class="modal-back hidden" id="modalBack"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+</body>
+</html>
