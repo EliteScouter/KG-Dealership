@@ -8,7 +8,14 @@ daily auction or from classified ads, recondition them, set your prices, and ope
 customers walk the lot and buy, haggle, bring trade-ins, or walk away if you're too greedy. Grow into
 an auto mall with a showroom, your own shop and detail bay, a finance office, billboards and a sales team.
 
-High scores rank players by **money earned** (total profit on every car sold), then **cars sold**.
+High scores rank players by **money earned** (total profit on every car sold, plus branch income), then **cars sold**.
+
+The end game: climb the reputation tiers (Shady lot to Legendary dealer), get invited to the twice-weekly
+**VIP Invitational** to bid on Mythic cars (250 GTO, McLaren F1, Miura...) against billionaires, sell to
+whale collectors and client requests, show your best car at the Friday **Concours d'Elegance**, open
+**branch dealerships** for nightly income, run a **Certified Pre-Owned** program, and fill the trophy case.
+Big lots get bulk tools: smart fix-up, detail/repair/repaint/inspect everything, set every price at once,
+or auto-price each morning.
 
 ## Play it
 

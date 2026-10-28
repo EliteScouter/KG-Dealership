@@ -187,7 +187,8 @@
         <g transform="translate(${x},${y - tagH / 2 - 2}) scale(${k})">${c.svg}</g>
         <rect x="${x - tagW / 2}" y="${ty}" width="${tagW}" height="${tagH}" rx="5" fill="${tagCol}" stroke="#fff" stroke-width="1"/>
         <text class="tag-text" x="${x}" y="${ty + tagH * 0.72}" text-anchor="middle" fill="#fff" font-size="${fs}">${car.job ? '\u{1F527} IN SHOP' : $m(car.ask)}</text>
-        ${m.rarity >= 3 ? `<text x="${x + g.cw / 2 - 16}" y="${y - g.ch / 2 + 24}" text-anchor="middle" font-size="${Math.round(fs * 1.3)}">${m.rarity === 4 ? '\u{1F451}' : '⭐'}</text>` : ''}
+        ${m.rarity >= 3 ? `<text x="${x + g.cw / 2 - 16}" y="${y - g.ch / 2 + 24}" text-anchor="middle" font-size="${Math.round(fs * 1.3)}">${['', '', '', '\u2B50', '\u{1F451}', '\u{1F48E}'][m.rarity]}</text>` : ''}
+        ${car.award || wantedBy(car).length ? `<text x="${x - g.cw / 2 + 16}" y="${y - g.ch / 2 + 24}" text-anchor="middle" font-size="${Math.round(fs * 1.3)}">${wantedBy(car).length ? '\u2757' : '\u{1F3C6}'}</text>` : ''}
       </g>`;
     }
     $('lotLayer').innerHTML = s;
@@ -205,11 +206,14 @@
     $('sNet').textContent = $m(DW.netWorth(S));
     $('sRep').style.width = `${S.rep}%`;
     $('sRepN').textContent = Math.round(S.rep);
+    $('sTier').textContent = DW.tier(S).name;
     $('sLot').textContent = `${S.cars.length}/${DW.spaces(S)}`;
     $('dayLabel').textContent = `Day ${S.day} · ${DAYS[(S.day - 1) % 7]}`;
     const bits = [];
+    if (DW.vipOpen(S) && DW.isVipDay(S)) bits.push('\u{1F48E} VIP Invitational today!');
     if (S.auction && S.auction.collector) bits.push('\u{1F451} Collector auction today!');
-    if (S.request) bits.push(`⭐ ${S.request.who} wants a ${DW.MODELS[S.request.mid].make} ${DW.MODELS[S.request.mid].model}`);
+    if (S.requests.length) bits.push(`\u2B50 ${S.requests.length} client request${S.requests.length > 1 ? 's' : ''} open`);
+    if (S.concours) bits.push(`\u{1F3C6} Concours on day ${S.concours.day}`);
     if (S.shark) bits.push(`\u{1F4B0} Big Tony wants ${$m(S.shark)} by day ${S.sharkDue}`);
     if (!bits.length) bits.push(`~${DW.traffic(S).toFixed(1)} customers expected · ${S.staff.length} salesm${S.staff.length > 1 ? 'en' : 'an'} can help ${S.staff.length * DW.PER_SALESMAN}`);
     $('daySub').textContent = bits.join('  ·  ');
@@ -222,7 +226,7 @@
     for (const b of $('tabs').children) b.setAttribute('aria-selected', String(b.dataset.tab === ui.tab));
     const body = $('tabBody');
     const top = body.scrollTop;
-    body.innerHTML = { lot: renderLotTab, buy: renderBuyTab, upgrades: renderUpgradesTab, staff: renderStaffTab, bank: renderBankTab, news: renderNewsTab }[ui.tab]();
+    body.innerHTML = { lot: renderLotTab, buy: renderBuyTab, upgrades: renderUpgradesTab, staff: renderStaffTab, empire: renderEmpireTab, bank: renderBankTab, news: renderNewsTab }[ui.tab]();
     body.scrollTop = top;
   }
   const grade = v => (v >= 85 ? 'A' : v >= 70 ? 'B' : v >= 55 ? 'C' : v >= 40 ? 'D' : 'F');
@@ -232,7 +236,8 @@
     const row = (label, v, note) => `<div class="bar"><span>${label}</span><span class="track"><i style="width:${v}%;background:${barColor(v)}"></i></span><b>${Math.round(v)}${note || ''}</b></div>`;
     return `<div class="bars">${row('Mechanical', mech, car.inspected || hideMech === false ? '' : '?')}${row('Body', car.body)}${row('Detail', car.detail)}</div>`;
   }
-  function rarityBadge(m) { return `<span class="badge r${m.rarity}">${DW.RARITY[m.rarity]}</span>`; }
+  function rarityBadge(m) { return `<span class="badge r${m.rarity}">${m.rarity === 5 ? '\u{1F48E} ' : ''}${DW.RARITY[m.rarity]}</span>`; }
+  const wantedBy = car => S.requests.filter(r => r.mid === car.mid);
   function verdict(car) {
     const r = car.ask / Math.max(1, DW.shownValue(S, car));
     if (r <= 0.97) return ['v-bargain', 'Bargain: it’ll fly off the lot (maybe too cheap?)'];
@@ -245,7 +250,7 @@
     const car = S.cars.find(c => c.id === ui.sel);
     let h = '';
     if (car) h += carDetail(car);
-    else h += `<h2>Your lot</h2><p class="muted small">Tap a car on the lot to price it, fix it up or wholesale it. Tap an empty space (or the Buy cars tab) to buy more.</p>`;
+    else h += `<h2>Your lot</h2><p class="muted small">Tap a car on the lot to price it, fix it up or wholesale it. Tap an empty space (or the Buy cars tab) to buy more.</p>` + bulkCard();
     h += `<h3>Inventory (${S.cars.length}/${DW.spaces(S)})</h3>`;
     if (!S.cars.length) h += `<p class="muted">Your lot is empty. Hit the <b>Buy cars</b> tab!</p>`;
     h += `<div class="inv-list">${S.cars.slice().sort((a, b) => a.spot - b.spot).map(c => {
@@ -256,16 +261,38 @@
     }).join('')}</div>`;
     return h;
   }
+  // bulk actions for the whole lot
+  function bulkSummary(what) {
+    const plan = DW.bulkPlan(S, what);
+    return { n: new Set(plan.map(p => p.car.id)).size, jobs: plan.length, cost: plan.reduce((t, p) => t + p.cost, 0), gain: plan.reduce((t, p) => t + p.gain, 0) };
+  }
+  function bulkCard() {
+    if (!S.cars.length) return '';
+    const b = (what, label) => { const x = bulkSummary(what); return `<button class="btn" data-act="bulk" data-what="${what}" ${x.jobs ? '' : 'disabled'}>${label}<small>${x.jobs ? `${x.n} car${x.n > 1 ? 's' : ''} \u00b7 ${$m(x.cost)}${what !== 'inspect' ? ` \u00b7 +${$m(x.gain)} value` : ''}` : 'nothing to do'}</small></button>`; };
+    const stale = DW.staleCars(S, 21).length;
+    return `<div class="card"><h2>Manage the whole lot</h2>
+      <div class="bulk">${b('smart', '\u2728 Smart fix-up')}${b('detail', '\u{1F9FD} Detail all')}${b('mech', '\u{1F527} Repair all')}${b('body', '\u{1F3A8} Repaint all')}${b('inspect', '\u{1F50D} Inspect all')}
+        <button class="btn" data-act="bulkwholesale" ${stale ? '' : 'disabled'}>\u{1F69A} Wholesale stale<small>${stale} car${stale === 1 ? '' : 's'} on the lot 21+ days</small></button></div>
+      <p class="small muted" style="margin:6px 0">Smart fix-up only does jobs that add more value than they cost.</p>
+      <div class="row" style="margin-top:8px"><b class="small">Prices</b>
+        <button class="btn small" data-act="bulkprice" data-pct="0">All to suggested</button>
+        <select id="pricePct" aria-label="Price all at a percent of value">${[0.95, 1, 1.05, 1.1, 1.15].map(p => `<option value="${p}" ${p === 1.05 ? 'selected' : ''}>${Math.round(p * 100)}% of value</option>`).join('')}</select>
+        <button class="btn small" data-act="bulkprice">Apply</button></div>
+      <div class="row" style="margin-top:6px"><label class="small" for="autoPrice"><b>Auto-price every morning</b></label>
+        <select id="autoPrice">${[[0, 'Off'], [1, '100% of value'], [1.05, '105% (suggested)'], [1.1, '110% of value']].map(([v, l]) => `<option value="${v}" ${Number(S.autoPrice) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>`;
+  }
   function carDetail(car) {
     const m = DW.model(car), shown = DW.shownValue(S, car), [vc, vt] = verdict(car);
     let h = `<div class="card"><div class="car-card">${carIcon(car)}<div>
       <div class="title">${esc(DW.carName(car))}</div>
       <div class="small muted">${rarityBadge(m)} ${esc(DW.SEGMENTS[m.seg])} · ${esc(DW.COLORS[car.color][0])} · ${fmt(car.miles)} miles</div>
-      ${car.salvage ? '<span class="badge warn">Salvage title</span> ' : ''}${car.issue && car.issue.known ? `<span class="badge warn">${esc(car.issue.name)}</span> ` : ''}${car.inspected && !car.issue ? '<span class="badge ok">Inspected</span>' : ''}
+      ${DW.isCpo(S, car) ? '<span class="badge cpo">\u2705 Certified</span> ' : ''}${car.award ? '<span class="badge award">\u{1F3C6} Concours winner</span> ' : ''}${car.salvage ? '<span class="badge warn">Salvage title</span> ' : ''}${car.issue && car.issue.known ? `<span class="badge warn">${esc(car.issue.name)}</span> ` : ''}${car.inspected && !car.issue ? '<span class="badge ok">Inspected</span>' : ''}
     </div></div>${bars(car)}
     <div class="kv"><span>Market value</span><span>~${$m(shown)}${car.inspected ? '' : '*'}</span><span>You’ve put in</span><span>${$m(car.cost)}</span><span>Days on the lot</span><span>${S.day - car.bought}</span></div>
     ${car.inspected ? '' : '<p class="small muted">* Not inspected. It might be hiding a problem.</p>'}</div>`;
-    if (S.request && S.request.mid === car.mid && !car.job) h += `<div class="card barn"><b>⭐ ${esc(S.request.who)}</b> wants exactly this car!<div class="row" style="margin-top:6px"><button class="btn primary" data-act="request" data-id="${car.id}">Sell for ${$m(DW.util.nicePrice(shown * S.request.mult))}</button></div></div>`;
+    if (!car.job) for (const r of wantedBy(car)) h += `<div class="card barn"><b>\u2B50 ${esc(r.who)}</b> wants exactly this car (until day ${r.until})!<div class="row" style="margin-top:6px"><button class="btn primary" data-act="request" data-id="${car.id}" data-req="${r.id}">Sell for ${$m(DW.requestPrice(S, car, r))}</button></div></div>`;
+    if (!car.job && DW.concoursOk(S, car)) h += S.concours ? (S.concours.carId === car.id ? `<div class="card"><b>\u{1F3C6} Entered in the Concours</b> \u00b7 judged on day ${S.concours.day}. Keep it on the lot until then.</div>` : '')
+      : `<div class="card row spread"><div><b>\u{1F3C6} Concours d\u2019Elegance</b><div class="small muted">Show it off on Friday. Win prize money, reputation, and an award that adds 8% to its value.</div></div><button class="btn small primary" data-act="concours" data-id="${car.id}">Enter ${$m(DW.CONCOURS_FEE)}</button></div>`;
     if (car.job) {
       h += `<div class="card"><b>\u{1F527} In the shop:</b> ${esc(DW.JOBS[car.job.kind].label)}, back on day ${car.job.done}.</div>`;
       return h;
@@ -279,12 +306,8 @@
       <div class="small">If it sells at this price: <b class="${car.ask - car.cost >= 0 ? 'pos' : 'neg'}">${car.ask - car.cost >= 0 ? '+' : '-'}${$m(Math.abs(car.ask - car.cost))}</b></div></div>`;
     h += `<div class="card"><h2>Fix it up</h2>`;
     for (const kind of ['mech', 'body', 'detail']) {
-      const info = DW.jobInfo(S, car, kind);
-      const f = DW.JOBS[kind].field, old = car[f], oldIssue = car.issue;
-      car[f] = info.target; if (kind === 'mech') car.issue = null;
-      const gain = DW.shownValue(S, car) - shown;
-      car[f] = old; car.issue = oldIssue;
-      h += `<div class="row spread" style="margin:6px 0"><div><b>${DW.JOBS[kind].label}</b><div class="small muted">${info.worth ? `${Math.round(info.from)} → ${info.target} · ${info.days ? info.days + ' day' + (info.days > 1 ? 's' : '') : 'instant'} · value <span class="${gain > info.cost ? 'pos' : 'neg'}">+${$m(gain)}</span>` : 'Already as good as it gets'}</div></div>
+      const info = DW.jobGain(S, car, kind), gain = info.gain;
+      h += `<div class="row spread" style="margin:6px 0"><div><b>${DW.JOBS[kind].label}</b><div class="small muted">${info.worth ? `${Math.round(info.from)} \u2192 ${info.target} \u00b7 ${info.days ? info.days + ' day' + (info.days > 1 ? 's' : '') : 'instant'}${kind !== 'detail' && S.levels.shop && !info.inHouse ? ' (bays full, sent out)' : ''} \u00b7 value <span class="${gain > info.cost ? 'pos' : 'neg'}">+${$m(gain)}</span>` : 'Already as good as it gets'}</div></div>
         <button class="btn small" data-act="job" data-kind="${kind}" data-id="${car.id}" ${info.worth ? '' : 'disabled'}>${info.worth ? $m(info.cost) : 'Done'}</button></div>`;
     }
     if (!car.inspected) h += `<div class="row spread" style="margin:6px 0"><div><b>Inspection</b><div class="small muted">Find hidden problems before a buyer does</div></div><button class="btn small" data-act="inspect" data-id="${car.id}">${$m(Math.round(DW.inspectCost(car) * (S.levels.shop ? 0.4 : 1)))}</button></div>`;
@@ -293,9 +316,10 @@
     return h;
   }
   function renderBuyTab() {
-    let h = `<div class="sub-tabs"><button data-act="subtab" data-v="auction" aria-selected="${ui.buyTab === 'auction'}">${S.auction.collector ? '\u{1F451} ' : ''}Auction</button><button data-act="subtab" data-v="ads" aria-selected="${ui.buyTab === 'ads'}">Classifieds (${S.classifieds.ads.length})</button></div>`;
+    let h = `<div class="sub-tabs"><button data-act="subtab" data-v="auction" aria-selected="${ui.buyTab === 'auction'}">${S.auction.collector ? '\u{1F451} ' : ''}Auction</button><button data-act="subtab" data-v="vip" aria-selected="${ui.buyTab === 'vip'}">${DW.vipOpen(S) && DW.isVipDay(S) ? '\u{1F48E} ' : ''}VIP</button><button data-act="subtab" data-v="ads" aria-selected="${ui.buyTab === 'ads'}">Classifieds (${S.classifieds.ads.length})</button></div>`;
     h += `<p class="small muted">Cash ${$m(S.cash)} · ${DW.freeSpaces(S)} free space${DW.freeSpaces(S) === 1 ? '' : 's'} on your lot</p>`;
-    if (ui.buyTab === 'auction') {
+    if (ui.buyTab === 'vip') h += renderVip();
+    else if (ui.buyTab === 'auction') {
       h += `<h2>${S.auction.collector ? 'Collector car auction' : 'Dealer auto auction'}</h2><p class="small muted">Set the most you’re willing to pay. Other dealers bid too; the highest secret max wins, at just above the runner-up. Buyer’s fee: 5% + $150. Auction cars are sold as-is.</p>`;
       S.auction.lots.forEach((lot, i) => {
         const car = lot.car, m = DW.model(car), v = DW.shownValue(S, car);
@@ -316,7 +340,7 @@
           <div class="small">“${esc(ad.blurb)}” <span class="muted">— ${esc(ad.seller)}, posted ${S.day - ad.posted ? `${S.day - ad.posted}d ago` : 'today'}</span></div>
           <div class="small muted">${fmt(car.miles)} mi · ${esc(DW.COLORS[car.color][0])}${car.inspected ? ` · ${car.issue ? `<span class="neg">${esc(car.issue.name)}</span>` : '<span class="pos">no hidden problems</span>'}${car.salvage ? ' · <span class="neg">SALVAGE title</span>' : ''}` : ''}</div>
           ${bars(car)}
-          <div class="small">Asking <b class="money">${$m(ad.ask)}</b> · looks worth ~${$m(DW.shownValue(S, car))}</div>
+          ${(() => { const worth = DW.shownValue(S, car), d = worth - ad.ask; return `<div class="small">Asking <b>${$m(ad.ask)}</b> \u00b7 looks worth ~<b class="${d >= 0 ? 'pos' : 'neg'}">${$m(worth)}</b> <span class="${d >= 0 ? 'pos' : 'neg'}">(${d >= 0 ? `${$m(d)} under value` : `${$m(-d)} over value`})</span></div>`; })()}
           ${ad.angry ? '<div class="small neg" style="margin-top:4px">The seller blocked you.</div>' : `<div class="row" style="margin-top:6px">
             <input type="number" id="offer${ad.id}" value="${DW.util.nicePrice(ad.ask * 0.85)}" step="100" aria-label="Your offer">
             <button class="btn small primary" data-act="offer" data-id="${ad.id}">Offer</button>
@@ -327,16 +351,37 @@
     }
     return h;
   }
+  function renderVip() {
+    if (!DW.vipOpen(S)) {
+      return `<div class="card vip"><h2>\u{1F48E} VIP Invitational</h2><p class="small">Twice a week, the richest collectors in the country bid on Legendary and <b>Mythic</b> cars: 250 GTOs, McLaren F1s, Miuras. Invitation only.</p>
+        <div class="kv small"><span>Reputation ${DW.VIP_REP}+</span><span class="${S.rep >= DW.VIP_REP ? 'pos' : 'neg'}">${Math.round(S.rep)}/${DW.VIP_REP}</span><span>Glass showroom or better</span><span class="${S.levels.showroom >= 2 ? 'pos' : 'neg'}">${S.levels.showroom >= 2 ? 'Yes' : 'Not yet'}</span></div>
+        <p class="small muted">Getting in also brings whale buyers with eight-figure budgets to your lot.</p></div>`;
+    }
+    if (!DW.isVipDay(S)) { const d = [3, 6].map(x => (x - (S.day % 7) + 7) % 7).filter(x => x > 0).sort((a, b) => a - b)[0]; return `<div class="card vip"><h2>\u{1F48E} VIP Invitational</h2><p>The next invitational is on <b>${d === 1 ? 'tomorrow' : `day ${S.day + d}`}</b> (${DAYS[(S.day + d - 1) % 7]}). It runs every Wednesday and Saturday.</p></div>`; }
+    let h = `<h2>\u{1F48E} VIP Invitational</h2><p class="small muted">Legendary and Mythic cars in top shape. The other bidders are billionaires, museums and royalty, and they don\u2019t mind paying full price. Buyer\u2019s premium: 10% + $5,000.</p>`;
+    DW.vipLots(S).forEach((lot, i) => {
+      const car = lot.car, m = DW.model(car), v = DW.shownValue(S, car);
+      h += `<div class="card vip ${lot.done ? (lot.done.won ? 'won' : 'lost') : ''}"><div class="car-card">${carIcon(car)}<div>
+        <div class="title">${esc(DW.carName(car))} ${rarityBadge(m)}</div>
+        <div class="small muted">${fmt(car.miles)} mi \u00b7 ${esc(DW.COLORS[car.color][0])} \u00b7 <b>${grade(DW.apparentMech(car))}</b> mech / <b>${grade(car.body)}</b> body / <b>${grade(car.detail)}</b> detail</div>
+        <div class="small">Estimate <span class="money">${$m(v)}</span> \u00b7 opening bid ${$m(lot.start)}</div>
+        ${lot.done ? `<div class="small" style="margin-top:4px"><b>${lot.done.won ? `\u2705 Yours for ${$m(lot.done.price)}` : `\u274C ${esc(lot.done.who)} took it for ${$m(lot.done.price)}`}</b></div>`
+        : `<div class="row" style="margin-top:6px"><input type="number" id="vbid${i}" value="${DW.util.nicePrice(v * 0.9)}" step="1000" aria-label="Your maximum bid"><button class="btn primary small" data-act="vipbid" data-i="${i}">Place max bid</button></div>`}
+      </div></div></div>`;
+    });
+    return h;
+  }
   function renderUpgradesTab() {
     let h = `<h2>Grow your dealership</h2><p class="small muted">Upgrades cost money up front plus a daily upkeep. Today’s bills: <b>${$m(DW.overhead(S))}</b>/day.</p>`;
     const effects = {
       lot: l => `${l.spaces} parking spaces`,
       showroom: l => (l.traffic ? `+${l.traffic} customers/day, rich buyers pay ${Math.round(l.premium * 100)}% more` : 'Basic office'),
-      shop: l => (l.bays === 99 ? 'Repairs sent out: full price, 2–3 days' : `${l.bays} bay${l.bays > 1 ? 's' : ''}, repairs ${Math.round((1 - l.costMult) * 100)}% cheaper, ${l.days ? l.days + ' day' : 'same day'}, up to ${l.max}/100`),
+      shop: l => (l.bays === 99 ? 'Repairs sent out: full price, 2\u20133 days' : `${l.bays} bay${l.bays > 1 ? 's' : ''}, repairs ${Math.round((1 - l.costMult) * 100)}% cheaper, ${l.days ? l.days + ' day' : 'same day'}, up to ${l.max}/100${l.bays >= 3 ? ', free inspection of every car you buy' : ''}`),
       detail: l => (l.instant ? `Instant details, ${Math.round((1 - l.costMult) * 100)}% cheaper` : 'Details sent out: full price, 1 day'),
       finance: l => (l.buyers ? `+${Math.round(l.buyers * 100)}% buyer budgets, +${Math.round(l.markup * 100)}% on financed deals` : 'Cash buyers only'),
       billboard: l => (l.traffic ? `+${l.traffic} customer${l.traffic > 1 ? 's' : ''}/day` : 'Nobody knows you exist'),
       insurance: l => (l.perDay ? 'Covers hail, and pays 80% if a car is stolen' : 'Hail and theft are your problem'),
+      cpo: l => (l.cost ? 'Inspected, clean-title cars in 80+ condition get certified: buyers pay 6% more and every sale builds reputation' : 'No certified cars'),
     };
     for (const [key, u] of Object.entries(DW.UPGRADES)) {
       const cur = u.levels[S.levels[key]], next = u.levels[S.levels[key] + 1];
@@ -352,12 +397,46 @@
     }
     return h;
   }
+  function renderEmpireTab() {
+    const t = DW.tier(S), next = DW.REP_TIERS.find(x => x.min > S.rep);
+    let h = `<h2>${esc(t.name)}</h2><div class="card"><div class="row spread"><b>Reputation ${Math.round(S.rep)}/100</b><span class="small muted">${next ? `${next.name} at ${next.min}` : 'Top of the world'}</span></div>
+      <div class="tier-bar"><i style="width:${S.rep}%"></i></div>
+      <div class="small"><b>Builds it:</b> every sale, cars in great shape, Certified cars, client requests, Concours ribbons, trophies, ads, upgrades, a showroom.
+      <br><b>Hurts it:</b> lemons coming back (inspect or repair before you sell!), customers nobody helps, Big Tony\u2019s guys.</div>
+      ${next && next.perk ? `<p class="small muted">${esc(next.name)} unlocks: ${esc(next.perk)}.</p>` : ''}</div>`;
+    h += `<h2 style="margin-top:14px">\u2B50 Client requests (${S.requests.length}/3)</h2>`;
+    if (!S.requests.length) h += '<p class="small muted">No requests right now. Rich clients call in every few days.</p>';
+    for (const r of S.requests) {
+      const m = DW.MODELS[r.mid], have = S.cars.filter(c => c.mid === r.mid);
+      h += `<div class="card req ${have.length ? 'have' : ''}"><div class="row spread"><div><b>${esc(r.who)}</b> wants a <b>${esc(m.make)} ${esc(m.model)}</b> ${rarityBadge(m)}
+        <div class="small muted">Pays ${Math.round((r.mult - 1) * 100)}% over value \u00b7 until day ${r.until} \u00b7 +${r.rep} reputation</div></div>
+        ${have.length ? `<button class="btn small primary" data-act="select" data-id="${have[0].id}">You have one!</button>` : '<span class="small muted">Find one at auction or in the classifieds</span>'}</div></div>`;
+    }
+    h += `<h2 style="margin-top:14px">\u{1F3C6} Concours d\u2019Elegance</h2><div class="card small">`;
+    if (S.concours) { const car = S.cars.find(c => c.id === S.concours.carId); h += `Entered: <b>${car ? esc(DW.carName(car)) : 'a car you no longer have'}</b>. Judging on day ${S.concours.day}.`; }
+    else { const ok = S.cars.filter(c => DW.concoursOk(S, c)); h += `Every Friday. Enter a Rare-or-better car in 85+ condition (${$m(DW.CONCOURS_FEE)}). A win pays at least $25,000, boosts your reputation, and makes the car an award winner (+8% value). ${ok.length ? `<br><b>Eligible now:</b> ${ok.slice(0, 4).map(c => `<button class="btn small" data-act="select" data-id="${c.id}">${esc(DW.carName(c))}</button>`).join(' ')}` : '<br>No eligible cars yet: fully restore a rare one.'}`; }
+    h += `</div><h2 style="margin-top:14px">\u{1F3E2} Branch dealerships</h2><p class="small muted">Each branch sends you a cut every night (more with a better reputation). It counts as money earned.</p>`;
+    for (const b of DW.BRANCHES) {
+      const own = S.branches.includes(b.id);
+      h += `<div class="card row spread"><div><b>${esc(b.name)}</b><div class="small muted">~${$m(DW.branchIncome(S, b))}/night \u00b7 needs ${b.rep}+ reputation</div></div>
+        ${own ? '<span class="small pos">Open</span>' : `<button class="btn small primary" data-act="branch" data-id="${b.id}" ${S.rep >= b.rep && b.cost <= S.cash ? '' : 'disabled'}>${$m(b.cost)}</button>`}</div>`;
+    }
+    const got = DW.TROPHIES.filter(x => S.trophies[x.id]).length;
+    h += `<h2 style="margin-top:14px">\u{1F3C6} Trophy case (${got}/${DW.TROPHIES.length})</h2><div class="trophies">${DW.TROPHIES.map(x => `<div class="trophy ${S.trophies[x.id] ? 'got' : ''}"><b>${S.trophies[x.id] ? '\u{1F3C6}' : '\u{1F512}'} ${esc(x.name)}</b>${esc(x.desc)}${S.trophies[x.id] ? `<div class="muted">Day ${S.trophies[x.id]}</div>` : ''}</div>`).join('')}</div>`;
+    return h;
+  }
   const stars = n => `<span class="stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>`;
   function renderStaffTab() {
     let h = `<h2>Sales team (${S.staff.length}/${DW.maxStaff(S)})</h2><p class="small muted">Each salesman can help ${DW.PER_SALESMAN} customers a day; anyone past that leaves annoyed. Better salesmen squeeze more money out of every deal, and they improve as they sell.</p>`;
-    for (const p of S.staff) h += `<div class="card row spread"><div><b>${esc(p.name)}</b> ${stars(p.skill)}<div class="small muted">${$m(p.wage)}/day · ${p.sold} cars sold</div></div><button class="btn small danger" data-act="fire" data-id="${p.id}" ${S.staff.length <= 1 ? 'disabled' : ''}>Fire</button></div>`;
-    h += `<h3>Looking for work (new faces every Monday)</h3>`;
-    if (!S.hirePool.people.length) h += '<p class="muted small">Nobody right now. Check back Monday.</p>';
+    for (const p of S.staff) {
+      const trainable = p.skill < 5 && S.day - (p.trained || 0) >= 7;
+      h += `<div class="card row spread"><div><b>${esc(p.name)}</b> ${stars(p.skill)}<div class="small muted">${$m(p.wage)}/day \u00b7 ${p.sold} cars sold</div></div><div class="row">
+        ${p.skill < 5 ? `<button class="btn small" data-act="train" data-id="${p.id}" ${trainable && DW.trainCost(p) <= S.cash ? '' : 'disabled'} title="${trainable ? 'One more star' : 'Back from training on day ' + ((p.trained || 0) + 7)}">Train ${$m(DW.trainCost(p))}</button>` : ''}
+        <button class="btn small danger" data-act="fire" data-id="${p.id}" ${S.staff.length <= 1 ? 'disabled' : ''}>Fire</button></div></div>`;
+    }
+    h += `<h3>Looking for work (new faces on day ${S.hireDay})</h3>
+      <div class="card row spread"><div><b>\u{1F4BC} Call a headhunter</b><div class="small muted">A fresh list right now, 3 stars and up. Better reputation draws better people.</div></div><button class="btn small" data-act="headhunter" ${DW.headhunterFee(S) > S.cash ? 'disabled' : ''}>${$m(DW.headhunterFee(S))}</button></div>`;
+    if (!S.hirePool.people.length) h += `<p class="muted small">Nobody right now. New applicants on day ${S.hireDay}.</p>`;
     for (const p of S.hirePool.people) h += `<div class="card row spread"><div><b>${esc(p.name)}</b> ${stars(p.skill)}<div class="small muted">${$m(p.wage)}/day · signing bonus ${$m(DW.hireFee(p))}</div></div><button class="btn small primary" data-act="hire" data-id="${p.id}" ${S.staff.length >= DW.maxStaff(S) || DW.hireFee(p) > S.cash ? 'disabled' : ''}>Hire</button></div>`;
     if (S.staff.length >= DW.maxStaff(S)) h += `<p class="small muted">No more desks. A bigger lot or showroom makes room for more salesmen.</p>`;
     return h;
@@ -414,7 +493,15 @@
     if (act === 'job') return result(DW.startJob(S, id, b.dataset.kind));
     if (act === 'inspect') return result(DW.inspectCar(S, id));
     if (act === 'wholesale') { const r = DW.wholesale(S, id); if (r.ok) ui.sel = null; return result(r, 'money'); }
-    if (act === 'request') { const r = DW.sellToRequest(S, id); if (r.ok) { ui.sel = null; kgEvent('celebrity_sale', { car: DW.carName(car) }); } return result(r, 'money'); }
+    if (act === 'request') { const r = DW.sellToRequest(S, id, Number(b.dataset.req)); if (r.ok) { ui.sel = null; kgEvent('client_sale', { car: DW.carName(car) }); trophies(); } return result(r, 'money'); }
+    if (act === 'concours') return result(DW.enterConcours(S, id));
+    if (act === 'vipbid') { const i = Number(b.dataset.i); return result(DW.vipBid(S, i, Number($(`vbid${i}`).value))); }
+    if (act === 'branch') { const r = DW.buyBranch(S, b.dataset.id); if (r.ok) trophies(); return result(r, 'money'); }
+    if (act === 'headhunter') return result(DW.headhunter(S));
+    if (act === 'train') return result(DW.train(S, id));
+    if (act === 'bulk') return bulkConfirm(b.dataset.what);
+    if (act === 'bulkprice') return result(DW.bulkPrice(S, b.dataset.pct === '0' ? 0 : Number($('pricePct').value)));
+    if (act === 'bulkwholesale') return bulkWholesaleConfirm();
     if (act === 'bid') { const i = Number(b.dataset.i); return result(DW.bid(S, i, Number($(`bid${i}`).value))); }
     if (act === 'offer') return result(DW.offerAd(S, id, Number($(`offer${id}`).value)));
     if (act === 'buyad') { const ad = S.classifieds.ads.find(a => a.id === id); return result(ad && DW.offerAd(S, id, ad.ask)); }
@@ -427,7 +514,23 @@
     if (act === 'repay') return result(DW.repay(S, b.dataset.who, Number($(b.dataset.who === 'bank' ? 'bankAmt' : 'sharkAmt').value)));
     if (act === 'repayall') return result(DW.repay(S, b.dataset.who, b.dataset.who === 'bank' ? S.bank : S.shark));
   }
+  const BULK_LABEL = { smart: 'Smart fix-up', detail: 'Detail all', mech: 'Repair all', body: 'Repaint all', inspect: 'Inspect all' };
+  async function bulkConfirm(what) {
+    const x = bulkSummary(what);
+    const r = await modal(`<h2>${BULK_LABEL[what]}</h2><p>${x.jobs} job${x.jobs > 1 ? 's' : ''} on ${x.n} car${x.n > 1 ? 's' : ''} for about <b>${$m(x.cost)}</b>${what !== 'inspect' ? `, adding about <b class="pos">${$m(x.gain)}</b> in value` : ''}.</p>
+      ${x.cost > S.cash ? `<p class="neg small">You have ${$m(S.cash)}, so it\u2019ll stop when the cash runs out.</p>` : ''}${what !== 'detail' && what !== 'inspect' && !S.levels.shop ? '<p class="small muted">No shop of your own: these go out for a few days.</p>' : ''}`,
+      [{ id: 'no', label: 'Cancel' }, { id: 'yes', label: 'Do it', cls: 'primary' }]);
+    if (r.id === 'yes') result(DW.bulkRun(S, what));
+  }
+  async function bulkWholesaleConfirm() {
+    const cars = DW.staleCars(S, 21), total = cars.reduce((t, c) => t + DW.wholesaleOffer(S, c), 0), cost = cars.reduce((t, c) => t + c.cost, 0);
+    const r = await modal(`<h2>Wholesale stale cars</h2><p>${cars.length} car${cars.length > 1 ? 's have' : ' has'} sat 21+ days. The wholesaler pays <b>${$m(total)}</b> for them (you put in ${$m(cost)}).</p>`,
+      [{ id: 'no', label: 'Keep them' }, { id: 'yes', label: 'Sell them all', cls: 'danger' }]);
+    if (r.id === 'yes') { ui.sel = null; result(DW.bulkWholesale(S, 21), 'money'); }
+  }
+  function trophies() { for (const t of DW.checkTrophies(S)) toast(`\u{1F3C6} Trophy: ${t.name}!`, 'good'); }
   function onPanelChange(e) {
+    if (e.target.id === 'autoPrice') { S.autoPrice = Number(e.target.value); if (S.autoPrice) DW.bulkPrice(S, S.autoPrice); toast(S.autoPrice ? `Auto-price on: every car is reset to ${Math.round(S.autoPrice * 100)}% of value each morning.` : 'Auto-price off.'); save(); render(); return; }
     if (e.target.id !== 'askInput') return;
     const car = S.cars.find(c => c.id === ui.sel);
     if (!car) return;
@@ -472,6 +575,8 @@
       <li><b>Grow:</b> a bigger lot, a showroom, your own shop and detail bay, more salesmen, ads, a finance office.</li>
       <li><b>Money:</b> the bank lends at 0.2% a day. Big Tony lends when the bank won’t. Don’t be late paying Tony.</li>
       <li><b>Rare cars</b> (⭐ rare, \u{1F451} legendary) show up at Sunday collector auctions and in barn-find ads. Collectors and celebrities pay big.</li>
+      <li><b>Manage the whole lot</b> from the Lot tab: smart fix-up, detail/repair/repaint everything, set every price at once, or auto-price each morning.</li>
+      <li><b>Empire:</b> reputation tiers, client requests, the Friday Concours d\u2019Elegance, branch dealerships and trophies. At 60 reputation with a glass showroom you\u2019re invited to the <b>VIP Invitational</b> (Mythic cars!) and whales start shopping your lot.</li>
       <li><b>High scores</b> rank you by money earned, then cars sold. They count across every dealership you run, even if one goes bust.</li></ul>`, [{ label: 'Let’s sell some cars', cls: 'primary' }]);
   }
   async function newGameFlow(carry) {
@@ -611,6 +716,8 @@
     const footfall = `${t.visitors} customer${t.visitors === 1 ? '' : 's'} came by${t.walked ? `, ${t.walked} left without buying` : ''}${t.unserved ? `, ${t.unserved} never got helped (hire more salesmen!)` : ''}.`;
     await modal(`<h2>End of day ${r.day}</h2><p class="small muted">${footfall}</p>
       <div class="report-lines">${lines.map(([k, v]) => `<span>${esc(k)}</span><b>${esc(v)}</b>`).join('')}</div>
+      ${r.rep ? `<p class="small">Reputation ${Math.round(r.rep.from)} \u2192 <b>${Math.round(r.rep.to)}</b> <span class="${r.rep.to >= r.rep.from ? 'pos' : 'neg'}">(${r.rep.to >= r.rep.from ? '+' : ''}${(r.rep.to - r.rep.from).toFixed(1)})</span>${r.rep.complaints ? ` \u00b7 <span class="neg">${r.rep.complaints} lemon complaint${r.rep.complaints > 1 ? 's' : ''}: inspect or repair before selling</span>` : ''}${r.rep.unserved ? ` \u00b7 <span class="neg">${r.rep.unserved} customers never got helped</span>` : ''}</p>` : ''}
+      ${r.trophies && r.trophies.length ? `<div class="feed">${r.trophies.map(t => `<div class="good">\u{1F3C6} Trophy unlocked: <b>${esc(t.name)}</b>, ${esc(t.desc)}</div>`).join('')}</div>` : ''}
       ${r.events.length ? `<h3>Overnight</h3><div class="feed">${r.events.map(e => `<div class="${e.kind}">${esc(e.text)}</div>`).join('')}</div>` : ''}
       <p class="small">Cash on hand: <b class="money">${$m(S.cash)}</b> · Net worth: <b>${$m(DW.netWorth(S))}</b></p>`,
       [{ label: `Start day ${S.day} ▶`, cls: 'primary' }]);

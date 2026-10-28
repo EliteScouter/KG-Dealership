@@ -102,6 +102,9 @@ input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); ou
 .badge.r2 { background: #183552; color: #8cc8ff; }
 .badge.r3 { background: #3d2a58; color: #d4b3ff; }
 .badge.r4 { background: #5a4410; color: #ffd866; box-shadow: 0 0 10px rgba(255, 204, 51, .4); }
+.badge.r5 { background: linear-gradient(90deg, #ff4fd8, #8a5cff, #3fd0ff); color: #fff; box-shadow: 0 0 12px rgba(200, 90, 255, .6); }
+.badge.cpo { background: #12324a; color: #8fd3ff; }
+.badge.award { background: #4a3a10; color: #ffe08a; }
 .badge.warn { background: #4a1d1d; color: #ffb3b3; }
 .badge.ok { background: #173a28; color: #a8f0c6; }
 
@@ -167,3 +170,18 @@ input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); ou
 @keyframes twinkle { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
 .drive-off { transition: transform 1.4s ease-in, opacity 1.4s; }
 @media (prefers-reduced-motion: reduce) { .tube-man, .sparkle { animation: none; } .person { transition-duration: .2s; } }
+
+/* ---------- expansion: bulk actions, empire ---------- */
+.bulk { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.bulk .btn { text-align: left; padding: 8px 10px; }
+.bulk .btn small { display: block; font-weight: 600; color: var(--muted); font-size: 12px; }
+.card.vip { border-color: #8a5cff; background: linear-gradient(180deg, #24183a, var(--panel-2)); }
+.card.req { border-color: #2a6b47; }
+.card.req.have { box-shadow: 0 0 0 2px var(--good) inset; }
+.tier-bar { height: 10px; border-radius: 5px; background: #0f1115; overflow: hidden; margin: 6px 0; }
+.tier-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent), var(--good)); }
+.trophies { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.trophy { padding: 8px; border-radius: 10px; background: #191c21; border: 1px solid var(--line); font-size: 13px; }
+.trophy.got { border-color: #b98a2f; background: linear-gradient(180deg, #33281a, #191c21); }
+.trophy b { display: block; }
+.trophy:not(.got) { opacity: .55; }

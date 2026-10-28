@@ -106,6 +106,88 @@
     M('Bugatti', 'Veyron', 2005, 2015, 'exotic', 'exotic', 1500000, 4),
     M('Porsche', '959', 1986, 1988, 'exotic', 'exotic', 1850000, 4, true),
     M('Ferrari', 'F40', 1987, 1992, 'exotic', 'exotic', 2850000, 4, true),
+
+    // ---- added later: more everyday cars (new models go at the END so saved cars keep their model) ----
+    M('Chevrolet', 'Aveo', 2004, 2011, 'hatch', 'economy', 2400, 1),
+    M('Pontiac', 'Aztek', 2001, 2005, 'suv', 'suv', 3200, 1),
+    M('Mitsubishi', 'Mirage', 2014, 2020, 'hatch', 'economy', 5200, 1),
+    M('Kia', 'Rio', 2012, 2020, 'sedan', 'economy', 5600, 1),
+    M('Mini', 'Cooper', 2007, 2018, 'hatch', 'economy', 7800, 1),
+    M('Subaru', 'Impreza', 2008, 2020, 'sedan', 'economy', 8500, 1),
+    M('Volkswagen', 'Golf', 2010, 2020, 'hatch', 'economy', 9000, 1),
+    M('Chevrolet', 'Impala', 2006, 2020, 'sedan', 'family', 7400, 1),
+    M('Kia', 'Optima', 2011, 2020, 'sedan', 'family', 8600, 1),
+    M('Hyundai', 'Sonata', 2011, 2020, 'sedan', 'family', 8800, 1),
+    M('Chrysler', '300', 2011, 2020, 'sedan', 'family', 11500, 1),
+    M('Dodge', 'Charger', 2011, 2020, 'sedan', 'family', 14500, 1),
+    M('Chrysler', 'Pacifica', 2017, 2022, 'van', 'family', 19000, 1),
+    M('Ford', 'Escape', 2010, 2020, 'suv', 'suv', 8200, 1),
+    M('Chevrolet', 'Equinox', 2010, 2020, 'suv', 'suv', 9500, 1),
+    M('Nissan', 'Rogue', 2010, 2020, 'suv', 'suv', 10200, 1),
+    M('Jeep', 'Cherokee', 2014, 2020, 'suv', 'suv', 11500, 1),
+    M('Toyota', 'Highlander', 2010, 2020, 'suv', 'suv', 21000, 1),
+    M('Ford', 'Bronco (new)', 2021, 2024, 'suv', 'suv', 41000, 2),
+    M('Toyota', 'Land Cruiser', 2008, 2021, 'suv', 'suv', 42000, 2),
+    M('Chevrolet', 'Colorado', 2015, 2022, 'truck', 'truck', 21000, 1),
+    M('GMC', 'Sierra 1500', 2014, 2020, 'truck', 'truck', 24000, 1),
+    M('Ford', 'Ranger', 2019, 2023, 'truck', 'truck', 25000, 1),
+    M('Ford', 'F-250 Super Duty', 2011, 2020, 'truck', 'truck', 31000, 1),
+    M('Ford', 'F-150 Raptor', 2017, 2020, 'truck', 'truck', 52000, 3),
+    M('Audi', 'Q5', 2011, 2020, 'suv', 'luxury', 16500, 1),
+    M('Mercedes-Benz', 'E-Class', 2010, 2019, 'sedan', 'luxury', 17500, 1),
+    M('BMW', 'X5', 2011, 2020, 'suv', 'luxury', 22000, 1),
+    M('Porsche', 'Cayenne', 2011, 2020, 'suv', 'luxury', 31000, 2),
+    M('Tesla', 'Model Y', 2020, 2024, 'suv', 'luxury', 31000, 1),
+    M('Porsche', 'Macan', 2015, 2021, 'suv', 'luxury', 34000, 2),
+    M('Rivian', 'R1T', 2022, 2024, 'truck', 'luxury', 58000, 2),
+    M('Lucid', 'Air', 2022, 2024, 'sedan', 'luxury', 62000, 3),
+    M('Mercedes-Benz', 'G-Class', 2010, 2020, 'suv', 'luxury', 72000, 3),
+    M('Toyota', 'GR86', 2022, 2024, 'coupe', 'sports', 29000, 2),
+    M('Ford', 'Focus RS', 2016, 2018, 'hatch', 'sports', 31000, 3, true),
+    M('Honda', 'Civic Type R', 2017, 2021, 'hatch', 'sports', 36000, 2),
+    M('BMW', 'M5', 2012, 2020, 'sedan', 'sports', 42000, 3),
+    M('Lotus', 'Elise', 2005, 2011, 'roadster', 'sports', 48000, 3, true),
+    M('Alfa Romeo', '4C', 2015, 2020, 'coupe', 'sports', 55000, 3),
+    M('Chevrolet', 'Corvette C8', 2020, 2024, 'exotic', 'sports', 68000, 2),
+    M('Nissan', 'GT-R', 2009, 2020, 'coupe', 'sports', 78000, 3),
+    M('Mercedes-AMG', 'GT', 2016, 2021, 'coupe', 'sports', 82000, 3),
+    // ---- more classics and legends ----
+    M('AMC', 'Gremlin', 1970, 1978, 'hatch', 'classic', 7500, 2, true),
+    M('Yugo', 'GV', 1986, 1991, 'hatch', 'classic', 3500, 2, true),
+    M('Ford', 'Pinto', 1971, 1980, 'hatch', 'classic', 6500, 2, true),
+    M('Ford', 'Model A', 1928, 1931, 'classic', 'classic', 24000, 3, true),
+    M('Chevrolet', 'C10', 1967, 1972, 'truck', 'classic', 38000, 3, true),
+    M('Chevrolet', 'Nova SS', 1968, 1972, 'muscle', 'classic', 42000, 3, true),
+    M('Pontiac', 'Firebird Trans Am', 1977, 1981, 'muscle', 'classic', 46000, 3, true),
+    M('Chevrolet', 'Impala SS', 1961, 1964, 'classic', 'classic', 48000, 3, true),
+    M('Buick', 'Grand National', 1984, 1987, 'coupe', 'classic', 52000, 3, true),
+    M('Oldsmobile', '442', 1968, 1972, 'muscle', 'classic', 58000, 3, true),
+    M('Toyota', 'Land Cruiser FJ40', 1970, 1983, 'suv', 'classic', 68000, 3, true),
+    M('Cadillac', 'Eldorado Biarritz', 1959, 1959, 'classic', 'classic', 95000, 3, true),
+    M('Jaguar', 'E-Type', 1961, 1974, 'roadster', 'classic', 155000, 4, true),
+    M('Shelby', 'GT500', 1967, 1968, 'muscle', 'classic', 210000, 4, true),
+    M('Toyota', 'Corolla GT-S (AE86)', 1984, 1987, 'coupe', 'jdm', 32000, 3, true),
+    M('Nissan', 'Silvia S15', 1999, 2002, 'coupe', 'jdm', 42000, 3, true),
+    M('Datsun', '240Z', 1970, 1973, 'coupe', 'jdm', 55000, 3, true),
+    M('Toyota', '2000GT', 1967, 1970, 'coupe', 'jdm', 1100000, 4, true),
+    M('Audi', 'R8', 2008, 2015, 'exotic', 'exotic', 85000, 3),
+    M('Ferrari', 'Testarossa', 1984, 1991, 'exotic', 'exotic', 150000, 4, true),
+    M('Lamborghini', 'Diablo', 1990, 2001, 'exotic', 'exotic', 320000, 4, true),
+    M('Porsche', 'Carrera GT', 2004, 2006, 'exotic', 'exotic', 1600000, 4, true),
+    // ---- MYTHIC (rarity 5): VIP auctions, the rarest barn finds, and whale collectors only ----
+    M('Aston Martin', 'DB5', 1963, 1965, 'classic', 'classic', 950000, 5, true),
+    M('Shelby', 'Cobra 427', 1965, 1967, 'roadster', 'classic', 1400000, 5, true),
+    M('Mercedes-Benz', '300SL Gullwing', 1954, 1957, 'classic', 'classic', 1600000, 5, true),
+    M('Porsche', '918 Spyder', 2013, 2015, 'exotic', 'exotic', 2000000, 5, true),
+    M('Lamborghini', 'Miura', 1966, 1972, 'exotic', 'exotic', 2600000, 5, true),
+    M('Koenigsegg', 'Agera', 2011, 2018, 'exotic', 'exotic', 2800000, 5, true),
+    M('Bugatti', 'Chiron', 2017, 2022, 'exotic', 'exotic', 3300000, 5, true),
+    M('Ferrari', 'Enzo', 2002, 2004, 'exotic', 'exotic', 3800000, 5, true),
+    M('Ferrari', 'LaFerrari', 2013, 2016, 'exotic', 'exotic', 4200000, 5, true),
+    M('Pagani', 'Zonda', 1999, 2011, 'exotic', 'exotic', 5500000, 5, true),
+    M('Ford', 'GT40', 1965, 1969, 'exotic', 'exotic', 9500000, 5, true),
+    M('McLaren', 'F1', 1993, 1998, 'exotic', 'exotic', 20000000, 5, true),
+    M('Ferrari', '250 GTO', 1962, 1964, 'classic', 'exotic', 48000000, 5, true),
   ];
   DW.MODELS.forEach((m, i) => { m.id = i; });
 
@@ -113,7 +195,50 @@
     economy: 'Economy', family: 'Family', suv: 'SUV', truck: 'Truck', luxury: 'Luxury',
     sports: 'Sports', classic: 'Classic', jdm: 'JDM legend', exotic: 'Exotic',
   };
-  DW.RARITY = ['', 'Common', 'Uncommon', 'Rare', 'Legendary'];
+  DW.RARITY = ['', 'Common', 'Uncommon', 'Rare', 'Legendary', 'Mythic'];
+
+  // reputation tiers: what people call you, and what it opens up
+  DW.REP_TIERS = [
+    { min: 0, name: 'Shady lot' }, { min: 20, name: 'Local dealer' }, { min: 40, name: 'Trusted dealer' },
+    { min: 60, name: 'Premier dealer', perk: 'VIP Invitational auctions (with a glass showroom) and whale collectors' },
+    { min: 80, name: 'Legendary dealer', perk: 'The best salespeople want to work for you' },
+  ];
+  DW.VIP_REP = 60; // reputation needed for the VIP Invitational (plus a glass showroom or better)
+
+  // branch dealerships: bought once, they send you a cut every night (more when your name is good)
+  DW.BRANCHES = [
+    { id: 'eastside', name: 'Eastside Used Cars', cost: 400000, income: 1600, rep: 30 },
+    { id: 'downtown', name: 'Downtown Auto Plaza', cost: 1200000, income: 4800, rep: 45 },
+    { id: 'suburbs', name: 'Suburban Super Center', cost: 3000000, income: 11500, rep: 55 },
+    { id: 'coast', name: 'Coastal Luxury Motors', cost: 8000000, income: 29000, rep: 70 },
+    { id: 'hills', name: 'Beverly Hills Exotics', cost: 25000000, income: 85000, rep: 85 },
+  ];
+
+  // rivals at the VIP Invitational
+  DW.WHALES = ['Sheikh Rahim', 'a tech billionaire', 'an anonymous phone bidder', 'Baron von Stahl', 'the Petersen Museum', 'a hedge fund manager',
+    'a Formula 1 champion', 'Mr. Tanaka from Osaka', 'a Saudi royal', 'Jay from the car show on TV'];
+
+  // trophies: each one is worth a little reputation when you earn it
+  DW.TROPHIES = [
+    { id: 'first', name: 'First sale', desc: 'Sell your first car', test: s => s.carsSold >= 1 },
+    { id: 'sold100', name: 'Mover', desc: 'Sell 100 cars', test: s => s.carsSold >= 100 },
+    { id: 'sold500', name: 'Volume dealer', desc: 'Sell 500 cars', test: s => s.carsSold >= 500 },
+    { id: 'sold2000', name: 'Car tsunami', desc: 'Sell 2,000 cars', test: s => s.carsSold >= 2000 },
+    { id: 'earn1m', name: 'Millionaire', desc: 'Earn $1,000,000', test: s => s.earned >= 1e6 },
+    { id: 'earn10m', name: 'Eight figures', desc: 'Earn $10,000,000', test: s => s.earned >= 1e7 },
+    { id: 'earn100m', name: 'Car baron', desc: 'Earn $100,000,000', test: s => s.earned >= 1e8 },
+    { id: 'bigsale', name: 'Whale hunter', desc: 'Sell one car for $1,000,000 or more', test: s => s.best.sale >= 1e6 },
+    { id: 'mythic', name: 'Myth maker', desc: 'Sell a Mythic car', test: s => s.stats.mythicSold >= 1 },
+    { id: 'fulllot', name: 'Wall-to-wall', desc: 'Fill a 32-car lot', test: s => DW.spaces(s) >= 32 && s.cars.length >= 32 },
+    { id: 'maxed', name: 'Auto empire', desc: 'Max out every upgrade', test: s => Object.keys(DW.UPGRADES).every(k => s.levels[k] >= DW.UPGRADES[k].levels.length - 1) },
+    { id: 'team', name: 'Dream team', desc: 'Have 5 salespeople with 5 stars', test: s => s.staff.filter(p => p.skill >= 5).length >= 5 },
+    { id: 'tony', name: 'Square with Tony', desc: 'Pay Big Tony back in full', test: s => s.stats.tonyPaid >= 1 },
+    { id: 'concours', name: 'Best in show', desc: 'Win a Concours d’Elegance', test: s => s.stats.concoursWins >= 1 },
+    { id: 'clients', name: 'Concierge', desc: 'Fill 5 client requests', test: s => s.stats.requests >= 5 },
+    { id: 'branch', name: 'Franchise', desc: 'Open a branch dealership', test: s => s.branches.length >= 1 },
+    { id: 'allbranches', name: 'Coast to coast', desc: 'Own every branch dealership', test: s => s.branches.length >= DW.BRANCHES.length },
+    { id: 'rep90', name: 'Household name', desc: 'Reach 90 reputation', test: s => s.rep >= 90 },
+  ];
 
   DW.COLORS = [
     ['Arctic White', '#f2f2ee'], ['Silver Metallic', '#b9bec4'], ['Graphite Gray', '#5b6068'], ['Jet Black', '#1d1f23'],
@@ -173,6 +298,10 @@
     insurance: { label: 'Insurance', icon: '\u{1F6E1}️', levels: [
       { name: 'No insurance', cost: 0, perDay: 0 },
       { name: 'Lot insurance', cost: 2500, perDay: 45 },
+    ] },
+    cpo: { label: 'Certified Pre-Owned', icon: '✅', levels: [
+      { name: 'No CPO program', cost: 0, perDay: 0 },
+      { name: 'CPO program', cost: 150000, perDay: 250 },
     ] },
   };
 
