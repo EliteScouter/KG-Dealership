@@ -188,6 +188,17 @@
     M('Ford', 'GT40', 1965, 1969, 'exotic', 'exotic', 9500000, 5, true),
     M('McLaren', 'F1', 1993, 1998, 'exotic', 'exotic', 20000000, 5, true),
     M('Ferrari', '250 GTO', 1962, 1964, 'classic', 'exotic', 48000000, 5, true),
+    // ---- Subaru specials ----
+    M('Subaru', '360', 1958, 1971, 'hatch', 'classic', 18000, 2, true),
+    M('Subaru', 'BRAT', 1978, 1987, 'truck', 'classic', 14000, 2, true),
+    M('Subaru', 'SVX', 1992, 1997, 'coupe', 'jdm', 12000, 2, true),
+    M('Subaru', 'Legacy GT spec.B', 2006, 2009, 'sedan', 'sports', 15000, 2),
+    M('Subaru', 'Impreza WRX STi Type R (GC8)', 1998, 2000, 'coupe', 'jdm', 45000, 3, true),
+    M('Subaru', 'Impreza P1 (Prodrive)', 2000, 2001, 'coupe', 'jdm', 55000, 3, true),
+    M('Subaru', 'Impreza WRX STI S203', 2005, 2005, 'sedan', 'jdm', 80000, 3, true),
+    M('Subaru', 'Impreza WRX STI S204', 2006, 2006, 'sedan', 'jdm', 85000, 3, true),
+    M('Subaru', 'WRX STI S209', 2022, 2022, 'sedan', 'sports', 90000, 3, true),
+    M('Subaru', 'Impreza 22B STi', 1998, 1998, 'coupe', 'jdm', 400000, 4, true),
   ];
   DW.MODELS.forEach((m, i) => { m.id = i; });
 
