@@ -461,25 +461,27 @@
   DW.visit = function (s, person, servedSoFar) {
     s.today.visitors++;
     const salesmen = s.staff.length;
-    if (servedSoFar >= salesmen * DW.PER_SALESMAN) {
+    // collectors and whales never wait in line: the owner looks after them personally
+    const vip = person.collector || person.whale;
+    if (!vip && servedSoFar >= salesmen * DW.PER_SALESMAN) {
       s.today.unserved++;
       if (s.today.unservedPenalty < 1.5) { s.today.unservedPenalty += 0.1; addRep(s, -0.1); } // annoying, but it caps out
       return { kind: 'unserved', text: pick(['Hello? Anybody work here?', 'Nobody to help me. I’m out.', 'I waited 20 minutes!']) }; }
-    const salesman = s.staff[servedSoFar % salesmen];
+    const salesman = vip ? s.staff.reduce((a, b) => (b.skill > a.skill ? b : a)) : s.staff[servedSoFar % salesmen];
     person.mood = rnd(0.9, 1.12) * (1 + (salesman.skill - 1) * 0.022);
     let options = s.cars.filter(c => !c.job && c.ask > 0 && c.ask <= person.budget * 1.05);
     if (person.whale) options = options.filter(c => model(c).rarity >= 4);
     else if (person.collector) options = options.filter(c => model(c).collectible || model(c).rarity >= 3);
     else if (person.seg) options = options.filter(c => model(c).seg === person.seg);
-    if (!options.length) { s.today.walked++; return { kind: 'nothing', text: person.collector ? 'Nothing here worth collecting.' : person.seg ? `No ${DW.SEGMENTS[person.seg].toLowerCase()} cars I can afford.` : 'Nothing in my price range.' }; }
+    if (!options.length) { s.today.walked++; return { kind: 'nothing', vip, text: person.collector ? 'Nothing here worth collecting.' : person.seg ? `No ${DW.SEGMENTS[person.seg].toLowerCase()} cars I can afford.` : 'Nothing in my price range.' }; }
     // they go for the car that looks like the best deal, with a bit of taste thrown in
     const car = weighted(options, c => Math.pow(DW.shownValue(s, c) / c.ask, 4) * rnd(0.5, 1.5) * (1 + DW.condition(c, true) / 100));
     const w = DW.willingness(s, car, person);
     const sm = { name: salesman.name, id: salesman.id };
-    if (car.ask <= w) return { kind: 'buy', car, price: car.ask, salesman: sm, trade: maybeTrade(s, person) };
-    if (car.ask <= w * 1.15) return { kind: 'offer', car, offer: nicePrice(w * rnd(0.9, 0.99)), w, salesman: sm, trade: maybeTrade(s, person) };
+    if (car.ask <= w) return { kind: 'buy', car, price: car.ask, salesman: sm, trade: maybeTrade(s, person), vip };
+    if (car.ask <= w * 1.15) return { kind: 'offer', car, offer: nicePrice(w * rnd(0.9, 0.99)), w, salesman: sm, trade: maybeTrade(s, person), vip };
     s.today.walked++;
-    return { kind: 'walk', car, text: pick(['Way too much for that.', 'Ha! For THAT?', 'I can get one cheaper online.', 'That price is a joke.']) };
+    return { kind: 'walk', car, vip, text: pick(['Way too much for that.', 'Ha! For THAT?', 'I can get one cheaper online.', 'That price is a joke.']) };
   };
   function maybeTrade(s, person) {
     if (!chance(0.22)) return null;

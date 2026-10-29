@@ -49,7 +49,7 @@ function playDay(s, style) {
   let served = 0;
   for (const p of people) {
     const v = DW.visit(s, p, served);
-    if (v.kind !== 'unserved') served++;
+    if (v.kind !== 'unserved' && !v.vip) served++;
     if (v.kind === 'buy') DW.closeSale(s, v, v.price, v.trade && v.trade.credit < DW.shownValue(s, v.trade.car) * 0.8);
     else if (v.kind === 'offer') {
       if (v.offer >= v.car.cost * 1.04) DW.closeSale(s, v, v.offer, false);

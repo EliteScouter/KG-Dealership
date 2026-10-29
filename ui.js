@@ -703,7 +703,7 @@
     const walking = [];
     for (let i = 0; i < people.length; i++) {
       const v = DW.visit(S, people[i], served);
-      if (v.kind !== 'unserved') served++;
+      if (v.kind !== 'unserved' && !v.vip) served++;
       if (v.kind === 'buy' || v.kind === 'offer') { await Promise.all(walking.splice(0)); await handleVisit(people[i], v, i); }
       else { walking.push(handleVisit(people[i], v, i)); await sleep(650); }
     }
