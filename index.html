@@ -9,7 +9,7 @@
 <script>
   // On Kaotic Gaming the files live under /play/<game>/; opened on its own, they're next to this page.
   // Bump ASSET_V when the css/js change so browsers fetch the new copies.
-  const ASSET_V = '20261028-1';
+  const ASSET_V = '20261028-2';
   const assetRoot = window.KG_BOOT ? `/play/${window.KG_BOOT.game}/` : './';
   document.write(`<link rel="stylesheet" href="${assetRoot}style.css?v=${ASSET_V}">`);
   for (const f of ['data.js', 'sim.js', 'ui.js']) document.write(`<script src="${assetRoot}${f}?v=${ASSET_V}"><\/script>`);

@@ -312,6 +312,12 @@
     }
     if (!car.inspected) h += `<div class="row spread" style="margin:6px 0"><div><b>Inspection</b><div class="small muted">Find hidden problems before a buyer does</div></div><button class="btn small" data-act="inspect" data-id="${car.id}">${$m(Math.round(DW.inspectCost(car) * (S.levels.shop ? 0.4 : 1)))}</button></div>`;
     h += `<p class="small muted">Mechanical repair always finds and fixes hidden problems (they go on the bill). Selling a car with a hidden problem can come back to haunt you.</p></div>`;
+    if (m.rarity >= 4) {
+      const [lo, hi] = DW.consignRange(S, car);
+      h += `<div class="card vip"><b>\u{1F48E} Consign to the VIP Invitational</b><div class="small muted">A sure sale for a car this special: billionaires bid on it at the Wednesday and Saturday invitational. You get about ${$m(lo)}–${$m(hi)} after the ${Math.round(DW.CONSIGN_FEE * 100)}% seller’s fee.</div>
+        ${DW.canConsign(S, car) ? `<div class="row" style="margin-top:6px"><button class="btn small primary" data-act="consign" data-id="${car.id}">Put it on the block</button></div>`
+        : `<div class="small" style="margin-top:4px">${DW.vipOpen(S) ? 'Open on Wednesdays and Saturdays.' : `Needs an invitation: ${DW.VIP_REP}+ reputation and a glass showroom.`}</div>`}</div>`;
+    }
     h += `<div class="card row spread"><div><b>Wholesale it</b><div class="small muted">Sell right now to a wholesaler, no questions asked</div></div><button class="btn small danger" data-act="wholesale" data-id="${car.id}">${$m(DW.wholesaleOffer(S, car))}</button></div>`;
     return h;
   }
@@ -495,6 +501,7 @@
     if (act === 'wholesale') { const r = DW.wholesale(S, id); if (r.ok) ui.sel = null; return result(r, 'money'); }
     if (act === 'request') { const r = DW.sellToRequest(S, id, Number(b.dataset.req)); if (r.ok) { ui.sel = null; kgEvent('client_sale', { car: DW.carName(car) }); trophies(); } return result(r, 'money'); }
     if (act === 'concours') return result(DW.enterConcours(S, id));
+    if (act === 'consign') { const r = DW.consign(S, id); if (r.ok) { ui.sel = null; kgEvent('big_sale', { car: DW.carName(car), consigned: true }); trophies(); } return result(r, 'money'); }
     if (act === 'vipbid') { const i = Number(b.dataset.i); return result(DW.vipBid(S, i, Number($(`vbid${i}`).value))); }
     if (act === 'branch') { const r = DW.buyBranch(S, b.dataset.id); if (r.ok) trophies(); return result(r, 'money'); }
     if (act === 'headhunter') return result(DW.headhunter(S));

@@ -206,6 +206,19 @@
     addCar(s, lot.car, total, 'VIP Invitational');
     return { ok: true, won: true, msg: `The hammer falls: yours for $${fmt(price)} (+$${fmt(DW.vipFee(price))} premium). ${lot.rival} is not happy.` };
   };
+  // consign a Legendary or Mythic car to the VIP Invitational: it always sells, at whatever the room pays
+  DW.CONSIGN_FEE = 0.06;
+  DW.consignRange = (s, car) => { const v = DW.shownValue(s, car); return [v * 0.92 * (1 - DW.CONSIGN_FEE), v * 1.15 * (1 - DW.CONSIGN_FEE)]; };
+  DW.canConsign = (s, car) => model(car).rarity >= 4 && !car.job && DW.vipOpen(s) && DW.isVipDay(s);
+  DW.consign = function (s, carId) {
+    const car = s.cars.find(c => c.id === carId);
+    if (!car || !DW.canConsign(s, car)) return { ok: false, msg: 'Consignment is only open at the VIP Invitational (Wednesdays and Saturdays).' };
+    s.today = s.today || newToday();
+    const hammer = nicePrice(DW.shownValue(s, car) * rnd(0.92, 1.15)), fee = money(hammer * DW.CONSIGN_FEE);
+    const who = pick(DW.WHALES);
+    recordSale(s, car, hammer - fee, `at the VIP Invitational (to ${who})`);
+    return { ok: true, msg: `SOLD to ${who} for $${fmt(hammer)}! After the ${Math.round(DW.CONSIGN_FEE * 100)}% seller’s fee you get $${fmt(hammer - fee)}.` };
+  };
   DW.vipLots = s => { if (DW.vipOpen(s) && DW.isVipDay(s) && (!s.vip || s.vip.day !== s.day)) makeVip(s); return s.vip && s.vip.day === s.day ? s.vip.lots : []; };
 
   DW.bid = function (s, lotIndex, maxBid) {
@@ -422,12 +435,12 @@
     for (let i = 0; i < n; i++) {
       // whales: eight-figure collectors who only come to dealers with a name
       if (DW.vipOpen(s) && chance(0.025 + premium * 0.15)) {
-        people.push({ name: `${pick(DW.FIRST)} ${pick(DW.LAST)}`, budget: money(Math.exp(rnd(Math.log(1.2e6), Math.log(6e7)))), seg: null, collector: true, whale: true, finance: false });
+        people.push({ name: `${pick(DW.FIRST)} ${pick(DW.LAST)}`, budget: money(Math.exp(rnd(Math.log(1.5e6), Math.log(1.6e8)))), seg: null, collector: true, whale: true, finance: false });
         continue;
       }
       const collector = chance(0.03 + premium * 0.6 + s.rep / 2500);
       const wealthy = !collector && chance(0.1 + premium);
-      const budget = collector ? Math.exp(rnd(Math.log(60000), Math.log(3500000))) : wealthy ? Math.exp(rnd(Math.log(25000), Math.log(160000))) : Math.exp(rnd(Math.log(1800), Math.log(42000)));
+      const budget = collector ? Math.exp(rnd(Math.log(60000), Math.log(8000000))) : wealthy ? Math.exp(rnd(Math.log(25000), Math.log(160000))) : Math.exp(rnd(Math.log(1800), Math.log(42000)));
       const seg = collector ? null : chance(0.45) ? null : weighted(Object.keys(SEG_WEIGHT), k => SEG_WEIGHT[k] * (['luxury', 'sports', 'exotic'].includes(k) ? 1 + premium * 8 : 1));
       people.push({ name: `${pick(DW.FIRST)} ${pick(DW.LAST)}`, budget: money(budget * (1 + DW.level(s, 'finance').buyers)), seg, collector, finance: s.levels.finance > 0 && chance(0.5) });
     }
