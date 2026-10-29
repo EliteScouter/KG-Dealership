@@ -10,7 +10,7 @@
   const KG = () => window.KG;
   const LS_KEY = 'dealer-wars-save-v1';
   let S = null;
-  const ui = { tab: 'lot', buyTab: 'auction', sel: null, running: false, speed: 1, dirty: false };
+  const ui = { tab: 'lot', buyTab: 'auction', empTab: 'overview', sel: null, running: false, speed: 1, dirty: false };
   const $ = id => document.getElementById(id);
   const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const sleep = ms => new Promise(r => setTimeout(r, ms / ui.speed));
@@ -211,6 +211,7 @@
     $('dayLabel').textContent = `Day ${S.day} · ${DAYS[(S.day - 1) % 7]}`;
     const bits = [];
     if (DW.vipOpen(S) && DW.isVipDay(S)) bits.push('\u{1F48E} VIP Invitational today!');
+    if (S.contracts.length) bits.push(`\u{1F69A} ${S.contracts.length} fleet contract${S.contracts.length > 1 ? 's' : ''}`);
     if (S.auction && S.auction.collector) bits.push('\u{1F451} Collector auction today!');
     if (S.requests.length) bits.push(`\u2B50 ${S.requests.length} client request${S.requests.length > 1 ? 's' : ''} open`);
     if (S.concours) bits.push(`\u{1F3C6} Concours on day ${S.concours.day}`);
@@ -318,6 +319,7 @@
         ${DW.canConsign(S, car) ? `<div class="row" style="margin-top:6px"><button class="btn small primary" data-act="consign" data-id="${car.id}">Put it on the block</button></div>`
         : `<div class="small" style="margin-top:4px">${DW.vipOpen(S) ? 'Open on Wednesdays and Saturdays.' : `Needs an invitation: ${DW.VIP_REP}+ reputation and a glass showroom.`}</div>`}</div>`;
     }
+    if (S.museum.level) h += `<div class="card row spread"><div><b>\u{1F3DB}️ Put it in the museum</b><div class="small muted">Off the market for good (you can take it back out). ${S.museum.cars.length}/${DW.museumSlots(S)} spots used.</div></div><button class="btn small" data-act="tomuseum" data-id="${car.id}" ${S.museum.cars.length < DW.museumSlots(S) ? '' : 'disabled'}>Display it</button></div>`;
     h += `<div class="card row spread"><div><b>Wholesale it</b><div class="small muted">Sell right now to a wholesaler, no questions asked</div></div><button class="btn small danger" data-act="wholesale" data-id="${car.id}">${$m(DW.wholesaleOffer(S, car))}</button></div>`;
     return h;
   }
@@ -404,6 +406,62 @@
     return h;
   }
   function renderEmpireTab() {
+    const tabs = [['overview', 'Overview'], ['museum', '\u{1F3DB}️ Museum'], ['fleet', `Fleet${S.contracts.length ? ` (${S.contracts.length})` : ''}`], ['prestige', `⭐ Prestige${S.prestige.stars ? ` (${S.prestige.stars})` : ''}`], ['trophies', 'Trophies']];
+    const bar = `<div class="sub-tabs wrap">${tabs.map(([v, l]) => `<button data-act="emptab" data-v="${v}" aria-selected="${ui.empTab === v}">${l}</button>`).join('')}</div>`;
+    return bar + { overview: renderEmpireOverview, museum: renderMuseum, fleet: renderFleet, prestige: renderPrestige, trophies: renderTrophies }[ui.empTab]();
+  }
+  function renderMuseum() {
+    const lv = DW.MUSEUM[S.museum.level], next = DW.MUSEUM[S.museum.level + 1];
+    let h = `<h2>\u{1F3DB}️ ${S.museum.level ? esc(lv.name) : 'Car museum'}</h2>
+      <div class="card"><p class="small">Park your best cars here for good. They don’t sell, they can’t be stolen, and visitors pay to see them every night (more for complete sets and a better reputation). The museum stays yours even if you sell the company.</p>
+      ${S.museum.level ? `<div class="kv small"><span>On display</span><span>${S.museum.cars.length}/${lv.slots}</span><span>Collection value</span><span>${$m(DW.museumValue(S))}</span><span>Ticket money</span><span class="money">${$m(DW.museumIncome(S))}/night</span><span>Complete sets</span><span>${DW.setsDone(S)}/${DW.SETS.length} (+${DW.setsDone(S) * 25}% tickets)</span></div>` : ''}
+      ${next ? `<div class="row spread" style="margin-top:8px"><div class="small"><b>${S.museum.level ? 'Expand to' : 'Build'}: ${esc(next.name)}</b> · ${next.slots} cars</div><button class="btn small primary" data-act="museum" ${next.cost > S.cash ? 'disabled' : ''}>${$m(next.cost)}</button></div>` : '<p class="small pos">The grandest museum there is.</p>'}</div>`;
+    if (S.museum.level) {
+      h += `<h3>On display</h3>`;
+      if (!S.museum.cars.length) h += '<p class="small muted">Empty. Open a car on your lot and choose “Put it in the museum.”</p>';
+      for (const car of S.museum.cars) h += `<div class="card"><div class="car-card">${carIcon(car)}<div><div class="title">${esc(DW.carName(car))} ${rarityBadge(DW.model(car))}${car.award ? ' <span class="badge award">\u{1F3C6}</span>' : ''}</div>
+        <div class="small muted">Worth ~${$m(DW.value(S, car))} · on display since day ${car.museumSince || S.day}</div>
+        <div class="row" style="margin-top:6px"><button class="btn small" data-act="frommuseum" data-id="${car.id}" ${DW.freeSpaces(S) ? '' : 'disabled'}>Back to the lot</button></div></div></div></div>`;
+    }
+    h += `<h2 style="margin-top:14px">Collection sets</h2><p class="small muted">Have every car of a set on display at once: +25% ticket money per complete set.</p>`;
+    for (const set of DW.SETS) {
+      const have = set.mids.filter(mid => S.museum.cars.some(c => c.mid === mid)).length, done = have === set.mids.length;
+      h += `<div class="card ${done ? 'req have' : ''}"><div class="row spread"><b>${done ? '✅ ' : ''}${esc(set.name)}</b><span class="small ${done ? 'pos' : 'muted'}">${have}/${set.mids.length}</span></div>
+        <div class="small">${set.mids.map(mid => { const m = DW.MODELS[mid], shown = S.museum.cars.some(c => c.mid === mid); return `<span class="${shown ? 'pos' : 'muted'}">${shown ? '✓' : '•'} ${esc(m.make)} ${esc(m.model)}</span>`; }).join('  ')}</div></div>`;
+    }
+    const owned = Object.keys(S.dex).length, byR = [1, 2, 3, 4, 5].map(r => [r, DW.MODELS.filter(m => m.rarity === r).length, DW.MODELS.filter(m => m.rarity === r && S.dex[m.id]).length]);
+    h += `<h2 style="margin-top:14px">\u{1F4D6} Collection book</h2><div class="card"><div class="row spread"><b>${owned}/${DW.MODELS.length} models owned</b><span class="small muted">every car you’ve ever bought</span></div>
+      <div class="tier-bar"><i style="width:${(owned / DW.MODELS.length) * 100}%"></i></div>
+      <div class="kv small">${byR.map(([r, n, k]) => `<span>${DW.RARITY[r]}</span><span>${k}/${n}</span>`).join('')}</div></div>`;
+    return h;
+  }
+  function renderFleet() {
+    let h = `<h2>\u{1F69A} Fleet contracts</h2><p class="small muted">Companies order batches of cars and pay over value, plus a 15% bonus when the whole order is in. Deliver in one go or a few at a time. Let one lapse and word gets around (−2 reputation). New offers turn up every few days once you have a paved lot.</p>`;
+    if (!S.contracts.length) h += '<div class="card small muted">No open contracts right now.</div>';
+    for (const c of S.contracts) {
+      const fit = DW.contractCars(S, c), left = c.count - c.delivered;
+      h += `<div class="card req ${fit.length ? 'have' : ''}"><b>${esc(c.who)}</b><div class="small">${left} more ${esc(c.what)} · ${c.minCond}+ condition · pays ${Math.round((c.mult - 1) * 100)}% over value</div>
+        <div class="small muted">${c.delivered}/${c.count} delivered · due day ${c.until} (${c.until - S.day} day${c.until - S.day === 1 ? '' : 's'} left)</div>
+        <div class="row" style="margin-top:6px"><button class="btn small primary" data-act="deliver" data-id="${c.id}" ${fit.length ? '' : 'disabled'}>${fit.length ? `Deliver ${Math.min(fit.length, left)} car${Math.min(fit.length, left) > 1 ? 's' : ''}` : 'Nothing on the lot fits'}</button></div></div>`;
+    }
+    return h;
+  }
+  function renderPrestige() {
+    const gain = DW.prestigeGain(S), cv = DW.companyValue(S), nextAt = Math.pow(gain + 1, 2) * 1e7;
+    let h = `<h2>⭐ Prestige</h2><div class="card"><div class="kv"><span>Stars to spend</span><span><b>${S.prestige.stars}</b></span><span>Companies sold</span><span>${S.prestige.count}</span><span>Stars earned in total</span><span>${S.prestige.total || 0}</span></div></div>
+      <div class="card vip"><b>Sell the company</b><p class="small">Cash out this dealership for prestige stars and start a new one. Stars buy permanent perks.</p>
+      <div class="kv small"><span>Company value (without the museum)</span><span>${$m(cv)}</span><span>Stars if you sell now</span><span><b>${gain}</b></span><span>Next star at</span><span>${$m(nextAt)}</span></div>
+      <p class="small"><b>You keep:</b> your museum and everything in it, the collection book, trophies, perks, and your all-time money earned and cars sold (your high score).<br><b>You lose:</b> cash, cars on the lot, upgrades, staff, branches, loans, reputation.</p>
+      <button class="btn danger" data-act="sellco" ${gain >= 1 ? '' : 'disabled'}>${gain >= 1 ? `Sell for ${gain} star${gain > 1 ? 's' : ''}` : 'Worth $10,000,000 to sell'}</button></div>
+      <h2 style="margin-top:14px">Perks</h2>`;
+    for (const p of DW.PERKS) {
+      const lvl = DW.perk(S, p.id);
+      h += `<div class="card row spread"><div><b>${esc(p.name)}</b> <span class="small muted">${lvl}/${p.max}</span><div class="small muted">${esc(p.desc)}${p.max > 1 ? ' (per level)' : ''}</div></div>
+        ${lvl >= p.max ? '<span class="small pos">Maxed</span>' : `<button class="btn small primary" data-act="perk" data-id="${p.id}" ${S.prestige.stars >= p.cost ? '' : 'disabled'}>${p.cost} ⭐</button>`}</div>`;
+    }
+    return h;
+  }
+  function renderEmpireOverview() {
     const t = DW.tier(S), next = DW.REP_TIERS.find(x => x.min > S.rep);
     let h = `<h2>${esc(t.name)}</h2><div class="card"><div class="row spread"><b>Reputation ${Math.round(S.rep)}/100</b><span class="small muted">${next ? `${next.name} at ${next.min}` : 'Top of the world'}</span></div>
       <div class="tier-bar"><i style="width:${S.rep}%"></i></div>
@@ -427,8 +485,12 @@
       h += `<div class="card row spread"><div><b>${esc(b.name)}</b><div class="small muted">~${$m(DW.branchIncome(S, b))}/night \u00b7 needs ${b.rep}+ reputation</div></div>
         ${own ? '<span class="small pos">Open</span>' : `<button class="btn small primary" data-act="branch" data-id="${b.id}" ${S.rep >= b.rep && b.cost <= S.cash ? '' : 'disabled'}>${$m(b.cost)}</button>`}</div>`;
     }
+    return h;
+  }
+  function renderTrophies() {
+    let h = '';
     const got = DW.TROPHIES.filter(x => S.trophies[x.id]).length;
-    h += `<h2 style="margin-top:14px">\u{1F3C6} Trophy case (${got}/${DW.TROPHIES.length})</h2><div class="trophies">${DW.TROPHIES.map(x => `<div class="trophy ${S.trophies[x.id] ? 'got' : ''}"><b>${S.trophies[x.id] ? '\u{1F3C6}' : '\u{1F512}'} ${esc(x.name)}</b>${esc(x.desc)}${S.trophies[x.id] ? `<div class="muted">Day ${S.trophies[x.id]}</div>` : ''}</div>`).join('')}</div>`;
+    h += `<h2>\u{1F3C6} Trophy case (${got}/${DW.TROPHIES.length})</h2><div class="trophies">${DW.TROPHIES.map(x => `<div class="trophy ${S.trophies[x.id] ? 'got' : ''}"><b>${S.trophies[x.id] ? '\u{1F3C6}' : '\u{1F512}'} ${esc(x.name)}</b>${esc(x.desc)}${S.trophies[x.id] ? `<div class="muted">Day ${S.trophies[x.id]}</div>` : ''}</div>`).join('')}</div>`;
     return h;
   }
   const stars = n => `<span class="stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>`;
@@ -493,6 +555,7 @@
     const car = S.cars.find(c => c.id === id);
     if (act === 'select') { ui.sel = id; render(); return; }
     if (act === 'subtab') { ui.buyTab = b.dataset.v; renderPanel(); return; }
+    if (act === 'emptab') { ui.empTab = b.dataset.v; renderPanel(); return; }
     if (ui.running && !['select'].includes(act)) { toast('Wait until the day is over.', 'bad'); return; }
     if (act === 'nudge') { car.ask = U.nicePrice(car.ask * Number(b.dataset.f)); save(); render(); return; }
     if (act === 'suggest') { car.ask = DW.suggestPrice(S, car); save(); render(); return; }
@@ -501,6 +564,12 @@
     if (act === 'wholesale') { const r = DW.wholesale(S, id); if (r.ok) ui.sel = null; return result(r, 'money'); }
     if (act === 'request') { const r = DW.sellToRequest(S, id, Number(b.dataset.req)); if (r.ok) { ui.sel = null; kgEvent('client_sale', { car: DW.carName(car) }); trophies(); } return result(r, 'money'); }
     if (act === 'concours') return result(DW.enterConcours(S, id));
+    if (act === 'museum') { const r = DW.buildMuseum(S); if (r.ok) trophies(); return result(r); }
+    if (act === 'tomuseum') { const r = DW.toMuseum(S, id); if (r.ok) { ui.sel = null; trophies(); } return result(r); }
+    if (act === 'frommuseum') return result(DW.fromMuseum(S, Number(b.dataset.id)));
+    if (act === 'deliver') { const r = DW.deliverContract(S, id); if (r.ok) trophies(); return result(r, 'money'); }
+    if (act === 'perk') return result(DW.buyPerk(S, b.dataset.id));
+    if (act === 'sellco') return sellCompanyFlow();
     if (act === 'consign') { const r = DW.consign(S, id); if (r.ok) { ui.sel = null; kgEvent('big_sale', { car: DW.carName(car), consigned: true }); trophies(); } return result(r, 'money'); }
     if (act === 'vipbid') { const i = Number(b.dataset.i); return result(DW.vipBid(S, i, Number($(`vbid${i}`).value))); }
     if (act === 'branch') { const r = DW.buyBranch(S, b.dataset.id); if (r.ok) trophies(); return result(r, 'money'); }
@@ -534,6 +603,19 @@
     const r = await modal(`<h2>Wholesale stale cars</h2><p>${cars.length} car${cars.length > 1 ? 's have' : ' has'} sat 21+ days. The wholesaler pays <b>${$m(total)}</b> for them (you put in ${$m(cost)}).</p>`,
       [{ id: 'no', label: 'Keep them' }, { id: 'yes', label: 'Sell them all', cls: 'danger' }]);
     if (r.id === 'yes') { ui.sel = null; result(DW.bulkWholesale(S, 21), 'money'); }
+  }
+  async function sellCompanyFlow() {
+    const gain = DW.prestigeGain(S);
+    const r = await modal(`<h2>Sell ${esc(S.name)}?</h2><p>A buyer will take the whole company off your hands for <b>${gain} prestige star${gain > 1 ? 's' : ''}</b>.</p>
+      <p class="small">You start over with a new dealership (and your perks). Your museum, collection book, trophies and high score come with you. Your cash, cars on the lot, upgrades, staff and branches do not.</p>`,
+      [{ id: 'no', label: 'Keep it' }, { id: 'yes', label: `Sell for ${gain} ⭐`, cls: 'danger' }]);
+    if (r.id !== 'yes') return;
+    const res = DW.sellCompany(S);
+    if (!res.ok) return toast(res.msg, 'bad');
+    kgEvent('sold_company', { stars: res.gain, run: S.runs });
+    S = res.state; ui.sel = null; ui.tab = 'empire'; ui.empTab = 'prestige';
+    drawScene(); render(); save(true);
+    toast(`Sold! ${res.gain} star${res.gain > 1 ? 's' : ''} to spend. Welcome to your new dealership.`, 'good');
   }
   function trophies() { for (const t of DW.checkTrophies(S)) toast(`\u{1F3C6} Trophy: ${t.name}!`, 'good'); }
   function onPanelChange(e) {
@@ -584,6 +666,7 @@
       <li><b>Rare cars</b> (⭐ rare, \u{1F451} legendary) show up at Sunday collector auctions and in barn-find ads. Collectors and celebrities pay big.</li>
       <li><b>Manage the whole lot</b> from the Lot tab: smart fix-up, detail/repair/repaint everything, set every price at once, or auto-price each morning.</li>
       <li><b>Empire:</b> reputation tiers, client requests, the Friday Concours d\u2019Elegance, branch dealerships and trophies. At 60 reputation with a glass showroom you\u2019re invited to the <b>VIP Invitational</b> (Mythic cars!) and whales start shopping your lot.</li>
+      <li><b>Maxed out?</b> Build a <b>museum</b> and complete collection sets, take <b>fleet contracts</b>, then <b>sell the company</b> for prestige stars and permanent perks, and do it all again faster.</li>
       <li><b>High scores</b> rank you by money earned, then cars sold. They count across every dealership you run, even if one goes bust.</li></ul>`, [{ label: 'Let’s sell some cars', cls: 'primary' }]);
   }
   async function newGameFlow(carry) {
@@ -593,7 +676,7 @@
       <p>${carry ? 'Your money earned and cars sold carry over. Everything else starts fresh.' : 'You’ve got <b>$12,000</b>, a gravel lot with 6 spaces, one salesman, and two beaters. Turn it into an auto empire.'}</p>
       <label for="dealerIn" class="small muted">Name your dealership</label><input type="text" id="dealerIn" maxlength="28" value="${esc(def)}" style="width:100%;margin-top:4px">`,
       [{ label: 'Open the lot', cls: 'primary', read: () => $('dealerIn').value.trim() || def }]);
-    S = DW.newGame(r.value, carry ? { earned: S.earned, carsSold: S.carsSold, revenue: S.revenue, runs: S.runs, best: S.best } : null);
+    S = DW.newGame(r.value, carry ? DW.carryOver(S) : null);
     ui.sel = null; ui.tab = 'lot';
     drawScene(); render(); save(true);
     if (!carry) help();

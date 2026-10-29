@@ -201,6 +201,47 @@
     M('Subaru', 'Impreza 22B STi', 1998, 1998, 'coupe', 'jdm', 400000, 4, true),
   ];
   DW.MODELS.forEach((m, i) => { m.id = i; });
+  const modelId = name => { const i = DW.MODELS.findIndex(m => `${m.make} ${m.model}` === name); if (i < 0) throw new Error('No model ' + name); return i; };
+
+  // ---- the museum: park cars for good, earn ticket money, complete sets ----
+  DW.MUSEUM = [
+    { name: 'No museum', slots: 0, cost: 0 },
+    { name: 'Private garage', slots: 6, cost: 2000000 },
+    { name: 'Car museum', slots: 15, cost: 10000000 },
+    { name: 'Grand automobile museum', slots: 30, cost: 40000000 },
+  ];
+  DW.SETS = [
+    { id: 'subaru', name: 'Subaru STI Legends', models: ['Subaru Impreza 22B STi', 'Subaru Impreza WRX STI S203', 'Subaru Impreza WRX STI S204', 'Subaru WRX STI S209', 'Subaru Impreza P1 (Prodrive)', 'Subaru Impreza WRX STi Type R (GC8)'] },
+    { id: 'muscle', name: 'Muscle Car Garage', models: ['Dodge Charger R/T', 'Plymouth Hemi ’Cuda', 'Chevrolet Chevelle SS', 'Pontiac GTO', 'Chevrolet Camaro SS', 'Ford Mustang Fastback', 'Shelby GT500'] },
+    { id: 'jdm', name: 'JDM Heroes', models: ['Toyota Supra Turbo', 'Nissan Skyline GT-R (R34)', 'Acura NSX', 'Mazda RX-7 (FD)', 'Toyota 2000GT', 'Datsun 240Z'] },
+    { id: 'italian', name: 'Italian Stallions', models: ['Ferrari F40', 'Lamborghini Countach', 'Lamborghini Miura', 'Ferrari Enzo', 'Ferrari LaFerrari', 'Ferrari Testarossa', 'Lamborghini Diablo'] },
+    { id: 'hyper', name: 'Hypercar Club', models: ['Bugatti Veyron', 'Bugatti Chiron', 'Koenigsegg Agera', 'Pagani Zonda', 'Porsche 918 Spyder', 'McLaren F1'] },
+    { id: 'mythic', name: 'The Mythic 13', models: [] },
+  ];
+  DW.SETS.find(x => x.id === 'mythic').models = DW.MODELS.filter(m => m.rarity === 5).map(m => `${m.make} ${m.model}`);
+  for (const set of DW.SETS) set.mids = set.models.map(modelId);
+
+  // ---- fleet contracts: a company orders a batch of cars ----
+  DW.CONTRACT_KINDS = [
+    { who: 'City Taxi Co.', what: 'family sedans or economy cars', segs: ['family', 'economy'], count: [5, 9], minCond: 65 },
+    { who: 'Rent-A-Ride', what: 'everyday cars, vans or SUVs', segs: ['economy', 'family', 'suv'], count: [6, 10], minCond: 70 },
+    { who: 'The County Sheriff', what: 'trucks or SUVs', segs: ['truck', 'suv'], count: [4, 7], minCond: 75 },
+    { who: 'Prestige Limo Service', what: 'luxury cars', segs: ['luxury'], count: [3, 6], minCond: 80 },
+    { who: 'A film studio (period piece)', what: 'classics, any condition that runs', segs: ['classic'], count: [2, 4], minCond: 50 },
+    { who: 'A street-racing movie', what: 'sports cars or JDM legends', segs: ['sports', 'jdm'], count: [3, 6], minCond: 55 },
+    { who: 'A tech startup perk program', what: 'luxury cars or SUVs', segs: ['luxury', 'suv'], count: [4, 8], minCond: 75 },
+  ];
+
+  // ---- prestige perks: bought with stars from selling a company, kept forever ----
+  DW.PERKS = [
+    { id: 'cash', name: 'Seed money', desc: '+$100,000 starting cash', max: 5, cost: 1 },
+    { id: 'rep', name: 'Old connections', desc: '+10 starting reputation', max: 4, cost: 1 },
+    { id: 'repair', name: 'Mechanic’s eye', desc: 'Repairs 8% cheaper', max: 5, cost: 1 },
+    { id: 'tongue', name: 'Silver tongue', desc: 'Buyers pay 2% more', max: 5, cost: 2 },
+    { id: 'lot', name: 'Prime real estate', desc: 'Start one lot size bigger', max: 2, cost: 2 },
+    { id: 'whale', name: 'Whale whisperer', desc: 'Whales visit more often', max: 2, cost: 2 },
+    { id: 'vip', name: 'Little black book', desc: 'VIP Invitational opens at 40 reputation, and runs on Mondays too', max: 1, cost: 3 },
+  ];
 
   DW.SEGMENTS = {
     economy: 'Economy', family: 'Family', suv: 'SUV', truck: 'Truck', luxury: 'Luxury',
@@ -249,6 +290,13 @@
     { id: 'branch', name: 'Franchise', desc: 'Open a branch dealership', test: s => s.branches.length >= 1 },
     { id: 'allbranches', name: 'Coast to coast', desc: 'Own every branch dealership', test: s => s.branches.length >= DW.BRANCHES.length },
     { id: 'rep90', name: 'Household name', desc: 'Reach 90 reputation', test: s => s.rep >= 90 },
+    { id: 'museum', name: 'Curator', desc: 'Open a car museum', test: s => s.museum.level >= 1 },
+    { id: 'set', name: 'Complete set', desc: 'Complete a museum collection set', test: s => DW.SETS.some(x => DW.setDone(s, x)) },
+    { id: 'allsets', name: 'Grand collection', desc: 'Complete every museum set', test: s => DW.SETS.every(x => DW.setDone(s, x)) },
+    { id: 'dex100', name: 'Car spotter', desc: 'Own 100 different models', test: s => Object.keys(s.dex).length >= 100 },
+    { id: 'dexall', name: 'Seen them all', desc: 'Own every model in the game', test: s => Object.keys(s.dex).length >= DW.MODELS.length },
+    { id: 'fleet', name: 'Fleet manager', desc: 'Complete 5 fleet contracts', test: s => s.stats.contracts >= 5 },
+    { id: 'prestige', name: 'Serial entrepreneur', desc: 'Sell your company and start again', test: s => s.prestige.count >= 1 },
   ];
 
   DW.COLORS = [

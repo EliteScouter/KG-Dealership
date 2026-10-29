@@ -95,10 +95,14 @@
       staff: [], cars: [], market: {}, effects: [], ads: [],
       auction: null, classifieds: null, hirePool: null, request: null, complaints: [],
       log: [], history: [], best: carry ? carry.best : { sale: 0, flip: 0, day: 0 },
-      nextId: 1, bankrupt: false,
+      nextId: carry && carry.nextId ? carry.nextId : 1, bankrupt: false,
     };
     upgradeSave(s, carry);
     for (const k of Object.keys(DW.SEGMENTS)) s.market[k] = 1;
+    // prestige perks bought with stars from earlier companies
+    s.cash += 100000 * perk(s, 'cash');
+    s.rep = clamp(s.rep + 10 * perk(s, 'rep'), 0, 100);
+    s.levels.lot = perk(s, 'lot');
     s.staff.push({ id: s.nextId++, name: 'Mike Rossi', skill: 2, wage: 140, sold: 0 });
     for (let i = 0; i < 2; i++) {
       const car = DW.makeCar(s, { profile: 'start', rarity: [1], maxBook: 8000 });
@@ -117,27 +121,37 @@
     if (!Array.isArray(s.requests)) { s.requests = []; if (s.request) s.requests.push({ ...s.request, id: s.nextId++, rep: 4 }); }
     delete s.request;
     s.trophies = s.trophies || (carry && carry.trophies) || {};
-    s.stats = Object.assign({ requests: 0, concoursWins: 0, mythicSold: 0, tonyPaid: 0, branchIncome: 0 }, (carry && carry.stats) || {}, s.stats || {});
+    s.stats = Object.assign({ requests: 0, concoursWins: 0, mythicSold: 0, tonyPaid: 0, branchIncome: 0, contracts: 0, museumIncome: 0 }, (carry && carry.stats) || {}, s.stats || {});
     s.branches = s.branches || [];
+    s.museum = s.museum || (carry && carry.museum) || { level: 0, cars: [] };
+    s.dex = s.dex || (carry && carry.dex) || {};
+    for (const c of [...s.cars, ...s.museum.cars]) if (!s.dex[c.mid]) s.dex[c.mid] = s.day;
+    s.prestige = s.prestige || (carry && carry.prestige) || { stars: 0, perks: {}, count: 0, total: 0 };
+    s.contracts = s.contracts || [];
     s.autoPrice = s.autoPrice || 0;
     s.hireDay = s.hireDay || s.day + 3;
     if (s.concours === undefined) s.concours = null;
     for (const p of s.staff) p.trained = p.trained || 0;
     return s;
   }
+  DW.carryOver = s => ({ earned: s.earned, carsSold: s.carsSold, revenue: s.revenue, runs: s.runs, best: s.best, trophies: s.trophies, stats: s.stats,
+    museum: s.museum, dex: s.dex, prestige: s.prestige, nextId: s.nextId });
+  const perk = (s, id) => (s.prestige && s.prestige.perks[id]) || 0;
+  DW.perk = perk;
   DW.note = (s, text, kind) => { s.log.unshift({ day: s.day, text, kind: kind || '' }); if (s.log.length > 80) s.log.length = 80; };
   DW.suggestPrice = (s, car) => nicePrice(DW.shownValue(s, car) * 1.05);
   DW.listPrice = (s, car) => (s.autoPrice ? nicePrice(DW.shownValue(s, car) * s.autoPrice) : DW.suggestPrice(s, car));
   DW.tier = s => DW.REP_TIERS.filter(t => s.rep >= t.min).pop();
-  DW.vipOpen = s => s.rep >= DW.VIP_REP && s.levels.showroom >= 2;
-  DW.isVipDay = s => [3, 6].includes(s.day % 7); // Wednesday and Saturday
+  DW.vipOpen = s => s.rep >= (perk(s, 'vip') ? 40 : DW.VIP_REP) && s.levels.showroom >= 2;
+  DW.isVipDay = s => [3, 6].includes(s.day % 7) || (perk(s, 'vip') > 0 && s.day % 7 === 1); // Wednesday and Saturday (and Monday with the black book)
   // the CPO program certifies inspected, clean-title cars in good shape
   DW.isCpo = (s, car) => s.levels.cpo > 0 && car.inspected && !car.salvage && !(car.issue && !car.issue.known) && DW.condition(car, false) >= 80;
   function addRep(s, amount) { s.rep = clamp(s.rep + amount, 0, 100); }
   DW.available = (s, car) => !car.job;
   DW.freeSpaces = s => DW.spaces(s) - s.cars.length;
   DW.inventoryValue = s => s.cars.reduce((t, c) => t + DW.value(s, c), 0);
-  DW.netWorth = s => money(s.cash + DW.inventoryValue(s) * 0.85 - s.bank - s.shark);
+  DW.museumValue = s => s.museum.cars.reduce((t, c) => t + DW.value(s, c), 0);
+  DW.netWorth = s => money(s.cash + (DW.inventoryValue(s) + DW.museumValue(s)) * 0.85 - s.bank - s.shark);
   DW.overhead = s => Object.keys(s.levels).reduce((t, k) => t + DW.level(s, k).perDay, 0) + s.staff.reduce((t, p) => t + p.wage, 0);
   DW.branchIncome = (s, b) => money(b.income * (0.7 + s.rep * 0.006));
   DW.maxStaff = s => 1 + s.levels.lot + s.levels.showroom;
@@ -153,6 +167,7 @@
     car.cost = money(cost); car.bought = s.day; car.job = null;
     if (car.salvage) car.salvageKnown = true; // the title paperwork shows it the moment it's yours
     if (s.levels.shop >= 2) reveal(car);      // a full service shop looks every arrival over for free
+    if (!s.dex[car.mid]) s.dex[car.mid] = s.day; // the collection book
     car.ask = DW.listPrice(s, car);
     s.cars.push(car);
     DW.note(s, `Bought a ${DW.carName(car)} (${how}) for $${fmt(cost)}.` + (car.salvage && how !== 'trade-in' ? ' The title came back SALVAGE. Ouch.' : ''), car.salvage ? 'bad' : '');
@@ -315,7 +330,7 @@
     const target = DW.jobTarget(s, kind);
     const from = kind === 'mech' ? DW.apparentMech(car) : car[j.field];
     const inHouse = kind === 'detail' ? s.levels.detail > 0 : s.levels.shop > 0 && DW.shopBusy(s) < DW.level(s, 'shop').bays;
-    const mult = inHouse ? DW.level(s, j.up).costMult : 1;
+    const mult = (inHouse ? DW.level(s, j.up).costMult : 1) * (1 - 0.08 * perk(s, 'repair'));
     const cost = nicePrice(Math.max(0, target - from) * j.perPt(m.book) * mult + (kind === 'detail' ? 60 : 150));
     const days = kind === 'detail' ? (DW.level(s, 'detail').instant ? 0 : 1) : (inHouse ? DW.level(s, 'shop').days : j.out);
     return { target, from, cost, days, inHouse, worth: target > from + 1 };
@@ -434,7 +449,7 @@
     const people = [];
     for (let i = 0; i < n; i++) {
       // whales: eight-figure collectors who only come to dealers with a name
-      if (DW.vipOpen(s) && chance(0.025 + premium * 0.15)) {
+      if (DW.vipOpen(s) && chance((0.025 + premium * 0.15) * (1 + 0.6 * perk(s, 'whale')))) {
         people.push({ name: `${pick(DW.FIRST)} ${pick(DW.LAST)}`, budget: money(Math.exp(rnd(Math.log(1.5e6), Math.log(1.6e8)))), seg: null, collector: true, whale: true, finance: false });
         continue;
       }
@@ -455,6 +470,7 @@
     if (person.finance) w *= 1 + DW.level(s, 'finance').markup;
     if (person.collector && m.collectible) w *= 1.1;
     if (DW.isCpo(s, car)) w *= 1.06;
+    w *= 1 + 0.02 * perk(s, 'tongue');
     return w;
   };
   // one visitor arrives: returns what happened (and, for offers, what the player has to decide)
@@ -694,6 +710,92 @@
     return got;
   };
 
+  // ---------- the museum ----------
+  DW.museumSlots = s => DW.MUSEUM[s.museum.level].slots;
+  DW.setDone = (s, set) => set.mids.every(mid => s.museum.cars.some(c => c.mid === mid));
+  DW.setsDone = s => DW.SETS.filter(x => DW.setDone(s, x)).length;
+  // ticket money every night: a sliver of what's on display, more for complete sets and a good name
+  DW.museumIncome = s => money(DW.museumValue(s) * 0.0005 * (1 + 0.25 * DW.setsDone(s)) * (0.6 + s.rep * 0.006));
+  DW.buildMuseum = function (s) {
+    const next = DW.MUSEUM[s.museum.level + 1];
+    if (!next) return { ok: false, msg: 'Your museum is as grand as it gets.' };
+    if (next.cost > s.cash) return { ok: false, msg: `That costs $${fmt(next.cost)}.` };
+    pay(s, next.cost); s.museum.level++; addRep(s, 3);
+    DW.note(s, `Opened the ${next.name}!`, 'good');
+    return { ok: true, msg: `The ${next.name} is open: room for ${next.slots} cars.` };
+  };
+  DW.toMuseum = function (s, carId) {
+    const car = s.cars.find(c => c.id === carId);
+    if (!car || car.job) return { ok: false, msg: 'That car is busy.' };
+    if (s.museum.cars.length >= DW.museumSlots(s)) return { ok: false, msg: s.museum.level ? 'The museum is full. Expand it or take a car out.' : 'Build a museum first (Empire tab).' };
+    s.cars = s.cars.filter(c => c !== car);
+    car.job = null; car.museumSince = s.day;
+    s.museum.cars.push(car);
+    if (s.concours && s.concours.carId === car.id) s.concours = null;
+    const done = DW.SETS.filter(x => DW.setDone(s, x) && x.mids.includes(car.mid));
+    for (const set of done) DW.note(s, `\u{1F3DB}️ Museum set complete: ${set.name}!`, 'good');
+    return { ok: true, msg: `The ${DW.carName(car)} is on display.${done.length ? ` Set complete: ${done.map(x => x.name).join(', ')}!` : ''}` };
+  };
+  DW.fromMuseum = function (s, carId) {
+    const car = s.museum.cars.find(c => c.id === carId);
+    if (!car) return { ok: false };
+    if (DW.freeSpaces(s) < 1) return { ok: false, msg: 'No room on your lot.' };
+    s.museum.cars = s.museum.cars.filter(c => c !== car);
+    car.bought = s.day; delete car.museumSince;
+    car.ask = DW.listPrice(s, car);
+    s.cars.push(car);
+    return { ok: true, msg: `The ${DW.carName(car)} is back on the lot, priced at $${fmt(car.ask)}.` };
+  };
+
+  // ---------- fleet contracts ----------
+  function makeContract(s) {
+    const k = pick(DW.CONTRACT_KINDS);
+    return { id: s.nextId++, who: k.who, what: k.what, segs: k.segs, minCond: k.minCond, count: ri(...k.count), delivered: 0, paid: 0,
+      mult: rnd(1.12, 1.3), until: s.day + ri(7, 12) };
+  }
+  DW.contractCars = (s, c) => s.cars.filter(car => !car.job && c.segs.includes(model(car).seg) && model(car).rarity <= 3 && DW.condition(car, false) >= c.minCond)
+    .sort((a, b) => DW.value(s, a) - DW.value(s, b));
+  DW.deliverContract = function (s, id) {
+    const c = s.contracts.find(x => x.id === id);
+    if (!c) return { ok: false };
+    const cars = DW.contractCars(s, c).slice(0, c.count - c.delivered);
+    if (!cars.length) return { ok: false, msg: `Nothing on your lot fits: ${c.what}, ${c.minCond}+ condition.` };
+    s.today = s.today || newToday();
+    let total = 0;
+    for (const car of cars) { const price = nicePrice(DW.value(s, car) * c.mult); recordSale(s, car, price, `to ${c.who}`); total += price; }
+    c.delivered += cars.length; c.paid += total;
+    if (c.delivered >= c.count) {
+      const bonus = money(c.paid * 0.15);
+      s.cash += bonus; s.earned = money(s.earned + bonus); s.runEarned = money(s.runEarned + bonus);
+      s.contracts = s.contracts.filter(x => x !== c); s.stats.contracts++; addRep(s, 3);
+      return { ok: true, msg: `Contract complete! ${cars.length} car${cars.length > 1 ? 's' : ''} for $${fmt(total)}, plus a $${fmt(bonus)} completion bonus from ${c.who}.` };
+    }
+    return { ok: true, msg: `Delivered ${cars.length} car${cars.length > 1 ? 's' : ''} for $${fmt(total)}. ${c.count - c.delivered} more to go.` };
+  };
+
+  // ---------- prestige: sell the company, keep the museum, start over stronger ----------
+  // stars come from what you sell off: the museum, which you keep, doesn't count
+  DW.companyValue = s => DW.netWorth(s) - money(DW.museumValue(s) * 0.85);
+  DW.prestigeGain = s => Math.floor(Math.sqrt(Math.max(0, DW.companyValue(s)) / 1e7));
+  DW.sellCompany = function (s) {
+    const gain = DW.prestigeGain(s);
+    if (gain < 1) return { ok: false, msg: 'Buyers only bite once you’re worth $10,000,000.' };
+    const carry = DW.carryOver(s);
+    carry.prestige = { ...s.prestige, perks: { ...s.prestige.perks }, stars: s.prestige.stars + gain, count: s.prestige.count + 1, total: (s.prestige.total || 0) + gain };
+    const fresh = DW.newGame(s.name, carry);
+    DW.note(fresh, `You sold your last company for ${gain} prestige star${gain > 1 ? 's' : ''}. Spend them in Empire → Prestige.`, 'good');
+    DW.checkTrophies(fresh);
+    return { ok: true, state: fresh, gain };
+  };
+  DW.buyPerk = function (s, id) {
+    const p = DW.PERKS.find(x => x.id === id), lvl = perk(s, id);
+    if (!p || lvl >= p.max) return { ok: false, msg: 'Maxed out.' };
+    if (s.prestige.stars < p.cost) return { ok: false, msg: `That takes ${p.cost} star${p.cost > 1 ? 's' : ''}.` };
+    s.prestige.stars -= p.cost; s.prestige.perks[id] = lvl + 1;
+    if (id === 'lot' && s.levels.lot < lvl + 1) s.levels.lot = lvl + 1; // takes effect right away too
+    return { ok: true, msg: `${p.name} is now level ${lvl + 1}.` };
+  };
+
   // ---------- bulk actions for a big lot ----------
   // what a bulk action would do: [{ car, kind, cost, gain }]
   DW.bulkPlan = function (s, what) {
@@ -750,6 +852,11 @@
       s.cash += cut; s.earned = money(s.earned + cut); s.runEarned = money(s.runEarned + cut); s.stats.branchIncome += cut;
       report.lines.push([`Branch dealerships (${s.branches.length})`, cut]);
     }
+    if (s.museum.cars.length) {
+      const tickets = DW.museumIncome(s);
+      s.cash += tickets; s.earned = money(s.earned + tickets); s.runEarned = money(s.runEarned + tickets); s.stats.museumIncome += tickets;
+      report.lines.push([`Museum tickets (${s.museum.cars.length} car${s.museum.cars.length > 1 ? 's' : ''})`, tickets]);
+    }
     // a nice showroom keeps people talking
     if (s.levels.showroom) addRep(s, 0.05 * s.levels.showroom);
     // the Concours d'Elegance is judged on Friday nights
@@ -787,6 +894,11 @@
     if (s.day >= s.hireDay || !s.hirePool) refreshHires(s);
     // auto-pricing: every car still on the lot gets re-priced against today's market
     if (s.autoPrice) for (const car of s.cars) if (!car.job) car.ask = DW.listPrice(s, car);
+    // fleet contracts: unfinished ones lapse (and the company grumbles), new ones arrive
+    for (const c of s.contracts.filter(x => x.until < s.day)) { addRep(s, -2); report.events.push({ text: `${c.who} gave up on you: ${c.delivered}/${c.count} cars delivered. They’re telling people.`, kind: 'bad' }); }
+    s.contracts = s.contracts.filter(x => x.until >= s.day);
+    if (s.levels.lot >= 1 && s.contracts.length < 2 && chance(0.3)) { const c = makeContract(s); s.contracts.push(c); report.events.push({ text: `New fleet contract: ${c.who} wants ${c.count} ${c.what} (${c.minCond}+ condition) by day ${c.until}, paying ${Math.round((c.mult - 1) * 100)}% over value plus a bonus.`, kind: 'good' }); }
+    for (const c of s.cars) if (!s.dex[c.mid]) s.dex[c.mid] = s.day;
     // keep the asking prices of untouched cars, but point out bargains/overpricing in the screen
     // out of cash: the bank covers it if it can, otherwise cars get sold to the wholesaler
     if (s.cash < 0) {

@@ -185,3 +185,5 @@ input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); ou
 .trophy.got { border-color: #b98a2f; background: linear-gradient(180deg, #33281a, #191c21); }
 .trophy b { display: block; }
 .trophy:not(.got) { opacity: .55; }
+.sub-tabs.wrap { flex-wrap: wrap; }
+.sub-tabs.wrap button { flex: 1 0 auto; }

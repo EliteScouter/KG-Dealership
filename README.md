@@ -17,6 +17,11 @@ whale collectors and client requests, show your best car at the Friday **Concour
 Big lots get bulk tools: smart fix-up, detail/repair/repaint/inspect everything, set every price at once,
 or auto-price each morning.
 
+After that: build a **museum** and complete collection sets for nightly ticket money, fill **fleet
+contracts**, track every model in the **collection book**, then **sell the company** for prestige stars,
+spend them on permanent perks, and start a new dealership (the museum, book, trophies and high score
+come with you).
+
 ## Play it
 
 - On the site: <https://kaotic.strictgaming.com/play/dealer-wars> (saves to your Kaotic Gaming account).
